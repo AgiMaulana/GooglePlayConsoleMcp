@@ -178,10 +178,11 @@ The service account lacks per-app Reporting API access. Retrying will not help.
 
 ## Marketplaces
 
-| Registry | Identifier |
+| Registry | Link |
 |---|---|
-| [Smithery](https://smithery.ai) | search `google-play-mcp` |
-| [Official MCP Registry](https://registry.modelcontextprotocol.io) | `io.github.agimaulana/google-play-mcp` |
+| [PyPI](https://pypi.org/project/google-play-mcp/) | `pip install google-play-mcp` |
+| [Smithery](https://smithery.ai/server/@agimaulana/google-play-mcp) | search `google-play-mcp` |
+| [Official MCP Registry](https://registry.modelcontextprotocol.io/servers/io.github.agimaulana/google-play-mcp) | `io.github.agimaulana/google-play-mcp` |
 
 ---
 
