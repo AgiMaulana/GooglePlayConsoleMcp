@@ -1,8 +1,9 @@
 # Google Play Console MCP
 
 A Python [Model Context Protocol](https://modelcontextprotocol.io/) server that
-lets AI assistants (Claude, etc.) manage your Google Play Store production
-releases directly.
+lets AI assistants (Claude, etc.) manage the full Google Play Store release
+lifecycle directly — from uploading artifacts to managing testers, rollouts,
+and Android Vitals.
 
 <!-- mcp-name: io.github.AgiMaulana/google-play-mcp -->
 
@@ -55,13 +56,38 @@ claude mcp add --transport http google-play-mcp http://localhost:8080
 
 ## Features
 
+### Tracks & Releases
+
 | Tool | Description |
 |---|---|
-| `promote_to_production` | Promote a build from internal track to production with a custom rollout % |
-| `check_review_status` | Check production release status (draft / inProgress / halted / completed) |
-| `update_rollout_percentage` | Increase or complete an existing staged rollout |
-| `get_production_release_info` | Fetch current rollout %, version codes, and release notes |
-| `get_crash_rate` | Fetch user-perceived crash rate via the Play Developer Reporting API |
+| `list_tracks` | List all tracks (internal, alpha, beta, production) with releases and country availability |
+| `get_track_info` | Get detailed status, rollout %, and release notes for a specific track |
+| `create_release` | Create or replace a release on any track with rollout %, release notes, and country targeting |
+| `update_release` | Update rollout %, halt, resume, or complete an existing release |
+| `promote_release` | Promote a release between tracks (e.g. internal → alpha → beta → production) |
+
+### Artifact Management
+
+| Tool | Description |
+|---|---|
+| `list_artifacts` | List all APKs and AABs with their version codes and SHA hashes |
+| `upload_artifact` | Upload an APK or AAB and create a release on a track in one step |
+| `upload_to_internal_sharing` | Upload a build to Internal App Sharing and get a shareable download URL |
+
+### Tester Management
+
+| Tool | Description |
+|---|---|
+| `get_testers` | Get tester email addresses and Google Groups for internal/closed testing |
+| `update_testers` | Replace the tester list for an internal or closed testing track |
+
+### Android Vitals
+
+| Tool | Description |
+|---|---|
+| `get_crash_rate` | Daily crash rate and user-perceived crash rate by version code |
+| `get_anr_rate` | Daily ANR rate and user-perceived ANR rate by version code |
+| `get_vitals_summary` | Combined crash + ANR overview with bad behavior threshold indicators |
 
 ---
 
@@ -76,17 +102,16 @@ claude mcp add --transport http google-play-mcp http://localhost:8080
 
 ### Required Play Console permissions
 
-| Tool | Minimum permission required |
+| Tools | Minimum permission required |
 |---|---|
-| `promote_to_production` | **Release to production, exclude devices, and use app signing by Google Play** |
-| `update_rollout_percentage` | **Release to production, exclude devices, and use app signing by Google Play** |
-| `check_review_status` | **View app information and download bulk reports (read-only)** |
-| `get_production_release_info` | **View app information and download bulk reports (read-only)** |
-| `get_crash_rate` | **View app information and download bulk reports (read-only)** |
+| `upload_artifact`, `create_release`, `update_release`, `promote_release`, `update_testers` | **Release to production, exclude devices, and use app signing by Google Play** |
+| `upload_to_internal_sharing` | **Release to testing tracks** |
+| `list_tracks`, `get_track_info`, `list_artifacts`, `get_testers` | **View app information and download bulk reports (read-only)** |
+| `get_crash_rate`, `get_anr_rate`, `get_vitals_summary` | **View app information and download bulk reports (read-only)** + Reporting API enabled |
 
 > **Important:** Release Manager does **not** grant Reporting API access. You must also enable
 > **View app information and download bulk reports (read-only)** — both at account level and
-> per-app level — for `get_crash_rate` to work.
+> per-app level — for the Vitals tools to work.
 
 ---
 
@@ -132,42 +157,145 @@ Restart Claude Desktop after saving.
 
 ## Tool reference
 
-### `promote_to_production`
+### `list_tracks`
 
 ```
-package_name       : str        — e.g. "com.example.myapp"
-version_codes      : list[int]  — e.g. [1042]
-rollout_percentage : float      — 1–100 (use 100 for immediate full release)
-release_name       : str        — optional, e.g. "2.4.1"
-release_notes_en   : str        — optional English release notes
+package_name : str  — e.g. "com.example.myapp"
 ```
 
-### `check_review_status`
+Returns all tracks with their releases, rollout percentages, statuses, and country availability.
+
+---
+
+### `get_track_info`
 
 ```
 package_name : str
+track        : str  — "internal" | "alpha" | "beta" | "production" (default: "production")
 ```
 
-Returns each production release with its status and rollout percentage.
+Returns a human-readable summary plus releases with status, rollout %, version codes, and release notes.
 
-### `update_rollout_percentage`
+---
+
+### `create_release`
 
 ```
 package_name       : str
-rollout_percentage : float      — new %, 0 < value <= 100
-version_codes      : list[int]  — optional; targets the first inProgress release if omitted
+track              : str        — "internal" | "alpha" | "beta" | "production"
+version_codes      : list[int]  — e.g. [1042]
+rollout_percentage : float      — default 10.0 (used when status is "inProgress")
+status             : str        — "draft" (default) | "inProgress" | "halted" | "completed"
+release_name       : str        — optional
+release_notes      : dict       — optional, e.g. {"en-US": "Bug fixes", "fr-FR": "Corrections"}
+country_codes      : list[str]  — optional ISO 3166-1 alpha-2 codes, e.g. ["US", "GB"]
 ```
 
-### `get_production_release_info`
+Creates or replaces a release on the given track. Use `status="inProgress"` with a
+`rollout_percentage` for a staged production rollout, or `status="completed"` to release
+to all users immediately.
+
+---
+
+### `update_release`
+
+```
+package_name       : str
+track              : str    — default "production"
+rollout_percentage : float  — optional; pass 100 to complete the rollout
+status             : str    — optional; "inProgress" | "halted" | "completed" | "draft"
+version_codes      : list[int]  — optional filter; targets first matching release if omitted
+```
+
+Update an existing release. Common use cases:
+- **Increase rollout:** `update_release(pkg, rollout_percentage=50)`
+- **Complete rollout:** `update_release(pkg, rollout_percentage=100)`
+- **Halt rollout:** `update_release(pkg, status="halted")`
+- **Resume rollout:** `update_release(pkg, status="inProgress")`
+
+---
+
+### `promote_release`
+
+```
+package_name       : str
+from_track         : str        — "internal" | "alpha" | "beta"
+to_track           : str        — "alpha" | "beta" | "production"
+version_codes      : list[int]
+rollout_percentage : float      — default 10.0
+release_name       : str        — optional override
+release_notes      : dict       — optional override; inherits from source if omitted
+```
+
+Copies a release from one track to another. Release notes and name are inherited from the
+source release unless explicitly overridden.
+
+---
+
+### `list_artifacts`
 
 ```
 package_name : str
 ```
 
-Returns the active release's rollout percentage, version codes, and release notes.
+Returns all APKs and AABs sorted by version code (newest first) with SHA hashes.
 
-> **Note:** Raw install/update event counts are not available via the public API.
-> Use **Play Console → Statistics**, [BigQuery exports](https://support.google.com/googleplay/android-developer/answer/10668107), or Firebase Analytics.
+---
+
+### `upload_artifact`
+
+```
+package_name       : str
+file_path          : str    — absolute local path to .apk or .aab
+track              : str    — default "internal"
+status             : str    — "draft" (default) | "inProgress" | "completed"
+rollout_percentage : float  — default 10.0 (used when status is "inProgress")
+release_name       : str    — optional
+release_notes      : dict   — optional
+```
+
+Uploads an APK or AAB (auto-detected from extension) and creates a release on the given
+track in a single atomic operation. Returns the assigned version code.
+
+---
+
+### `upload_to_internal_sharing`
+
+```
+package_name : str
+file_path    : str  — absolute local path to .apk or .aab
+```
+
+Uploads a build to Internal App Sharing (bypasses track assignment) and returns a
+shareable `downloadUrl`. Testers must have Internal App Sharing enabled in their Play
+Store settings. Ideal for quick one-off testing without affecting any release track.
+
+---
+
+### `get_testers`
+
+```
+package_name : str
+track        : str  — "internal" (default) | "alpha"
+```
+
+Returns the list of tester email addresses and Google Groups for the track.
+
+---
+
+### `update_testers`
+
+```
+package_name  : str
+track         : str         — "internal" (default) | "alpha"
+emails        : list[str]   — optional; full replacement list of tester emails
+google_groups : list[str]   — optional; full replacement list of Google Group emails
+```
+
+> **Warning:** This is a full replacement. Testers not in the new list will lose access.
+> Call `get_testers` first to retrieve the current list if you only want to add/remove individuals.
+
+---
 
 ### `get_crash_rate`
 
@@ -178,12 +306,39 @@ version_code : str  — optional single version code to filter
 ```
 
 Returns daily `crashRate`, `userPerceivedCrashRate`, and `distinctUsers` per version code.
+Google's bad behavior threshold for user-perceived crash rate is **~1.09%**.
+
+---
+
+### `get_anr_rate`
+
+```
+package_name : str
+days         : int  — look-back window, 1–30 (default 7)
+version_code : str  — optional single version code to filter
+```
+
+Returns daily `anrRate`, `userPerceivedAnrRate`, and `distinctUsers` per version code.
+Google's bad behavior threshold for user-perceived ANR rate is **~0.47%**.
+
+---
+
+### `get_vitals_summary`
+
+```
+package_name : str
+days         : int  — look-back window, 1–30 (default 7)
+```
+
+Returns a combined crash + ANR summary aggregated per version code, with averages over
+the period and `exceedsCrashThreshold` / `exceedsAnrThreshold` flags. The latest version
+is highlighted as `latestVersionSummary`.
 
 ---
 
 ## Troubleshooting
 
-### `403 Forbidden` on `get_crash_rate`
+### `403 Forbidden` on Vitals tools
 
 ```
 403 Client Error: Forbidden for url: https://playdeveloperreporting.googleapis.com/...
@@ -201,6 +356,11 @@ Enable it in your Google Cloud project:
 1. Play Console → **Setup → API access** → find the service account → **Manage Play Console permissions**.
 2. Under **App permissions**, select the app and enable **View app information and download bulk reports (read-only)**.
 3. Save and wait a few minutes for the change to propagate.
+
+### `404 Package not found`
+
+The service account must be linked to the same Google Play Console account that owns the app.
+Go to Play Console → **Setup → API access** and verify the service account is listed and has been invited.
 
 ---
 

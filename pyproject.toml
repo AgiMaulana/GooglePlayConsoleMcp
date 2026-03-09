@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "google-play-mcp"
-version = "0.2.1"
-description = "Google Play Console MCP Server — manage production releases from your AI assistant."
+version = "0.3.0"
+description = "Google Play Console MCP Server — manage the full app release lifecycle from your AI assistant."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }

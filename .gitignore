@@ -1,5 +1,6 @@
 # Environment & secrets
 .env
+.mcpregistry_*
 *.json
 !*example*.json
 !server.json
