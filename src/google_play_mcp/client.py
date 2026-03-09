@@ -216,8 +216,18 @@ class ReportingClient:
         app = self._app_path(package_name)
         url = f"{REPORTING_BASE_URL}/{app}/crashRateMetricSet:query"
 
+        end = datetime.now(timezone.utc)
+        start = end - timedelta(days=days)
+
+        def _date(dt: datetime) -> Dict[str, int]:
+            return {"year": dt.year, "month": dt.month, "day": dt.day}
+
         body: Dict[str, Any] = {
-            "timeline": {"aggregationPeriod": "DAILY"},
+            "timelineSpec": {
+                "aggregationPeriod": "DAILY",
+                "startTime": _date(start),
+                "endTime": _date(end),
+            },
             "metrics": [
                 "crashRate",
                 "userPerceivedCrashRate",
