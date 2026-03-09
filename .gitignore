@@ -2,6 +2,7 @@
 .env
 *.json
 !*example*.json
+!server.json
 
 # Python
 __pycache__/

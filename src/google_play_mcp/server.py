@@ -346,7 +346,27 @@ def get_crash_rate(
 # ---------------------------------------------------------------------------
 
 def main() -> None:
-    mcp.run()
+    import argparse
+
+    parser = argparse.ArgumentParser(description="Google Play Console MCP Server")
+    parser.add_argument(
+        "--transport",
+        choices=["stdio", "http"],
+        default="stdio",
+        help="Transport mode (default: stdio)",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=8080,
+        help="Port for HTTP transport (default: 8080)",
+    )
+    args = parser.parse_args()
+
+    if args.transport == "http":
+        mcp.run(transport="streamable-http", host="0.0.0.0", port=args.port)
+    else:
+        mcp.run()
 
 
 if __name__ == "__main__":

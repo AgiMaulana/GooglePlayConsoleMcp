@@ -1,0 +1,18 @@
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    required:
+      - googleApplicationCredentials
+    properties:
+      googleApplicationCredentials:
+        type: string
+        description: "Absolute path to your Google Cloud service account JSON key file"
+  commandFunction: |-
+    (config) => ({
+      command: "uvx",
+      args: ["google-play-mcp"],
+      env: {
+        GOOGLE_APPLICATION_CREDENTIALS: config.googleApplicationCredentials
+      }
+    })

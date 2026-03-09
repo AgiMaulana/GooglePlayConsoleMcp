@@ -4,6 +4,27 @@ A Python [Model Context Protocol](https://modelcontextprotocol.io/) server that
 lets AI assistants (Claude, etc.) manage your Google Play Store production
 releases directly.
 
+<!-- mcp-name: io.github.agimaulana/google-play-mcp -->
+
+## Quick start
+
+**stdio (recommended):**
+```bash
+claude mcp add google-play-mcp \
+  -e GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json \
+  -- uvx google-play-mcp
+```
+
+**HTTP (local server):**
+```bash
+# 1. Start the server
+GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json \
+  uvx google-play-mcp --transport http --port 8080
+
+# 2. In another terminal
+claude mcp add --transport http google-play-mcp http://localhost:8080
+```
+
 ## Features
 
 | Tool | Description |
@@ -229,6 +250,15 @@ Retrying will not help — this is a permissions issue.
 
 > Account-level permissions alone are not enough — the permission must be granted
 > at the **per-app** level for the Reporting API to return data.
+
+---
+
+## Marketplaces
+
+This server is listed on:
+
+- [Smithery](https://smithery.ai) — search `google-play-mcp`
+- [Official MCP Registry](https://registry.modelcontextprotocol.io) — `io.github.agimaulana/google-play-mcp`
 
 ---
 
