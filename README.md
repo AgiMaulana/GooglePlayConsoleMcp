@@ -4,7 +4,7 @@ A Python [Model Context Protocol](https://modelcontextprotocol.io/) server that
 lets AI assistants (Claude, etc.) manage your Google Play Store production
 releases directly.
 
-<!-- mcp-name: io.github.agimaulana/google-play-mcp -->
+<!-- mcp-name: io.github.AgiMaulana/google-play-mcp -->
 
 ---
 
@@ -188,7 +188,7 @@ Enable it in your Google Cloud project:
 |---|---|
 | [PyPI](https://pypi.org/project/google-play-mcp/) | `pip install google-play-mcp` |
 | [Smithery](https://smithery.ai/server/@agimaulana/google-play-mcp) | search `google-play-mcp` |
-| [Official MCP Registry](https://registry.modelcontextprotocol.io/servers/io.github.agimaulana/google-play-mcp) | `io.github.agimaulana/google-play-mcp` |
+| [Official MCP Registry](https://registry.modelcontextprotocol.io/servers/io.github.AgiMaulana/google-play-mcp) | `io.github.AgiMaulana/google-play-mcp` |
 
 ---
 

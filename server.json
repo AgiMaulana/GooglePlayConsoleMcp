@@ -1,14 +1,18 @@
 {
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
-  "name": "io.github.agimaulana/google-play-mcp",
-  "description": "Manage Google Play Store production releases from your AI assistant — promote builds, adjust rollout percentages, check review status, and fetch crash-rate vitals.",
-  "version": "0.2.0",
+  "name": "io.github.AgiMaulana/google-play-mcp",
+  "description": "Manage Google Play Store releases from your AI assistant.",
+  "version": "0.2.1",
   "packages": [
     {
       "registryType": "pypi",
       "name": "google-play-mcp",
-      "version": "0.2.0",
-      "runtimeArguments": ["uvx", "google-play-mcp"],
+      "version": "0.2.1",
+      "identifier": "google-play-mcp",
+      "transport": { "type": "stdio" },
+      "runtimeArguments": [
+        { "type": "positional", "value": "google-play-mcp" }
+      ],
       "environmentVariables": [
         {
           "name": "GOOGLE_APPLICATION_CREDENTIALS",
