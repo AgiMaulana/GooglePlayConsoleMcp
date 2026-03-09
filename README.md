@@ -167,9 +167,15 @@ Returns daily `crashRate`, `userPerceivedCrashRate`, and `distinctUsers` per ver
 403 Client Error: Forbidden for url: https://playdeveloperreporting.googleapis.com/...
 ```
 
-The service account lacks per-app Reporting API access. Retrying will not help.
+This error has two common causes — check both:
 
-**Fix:**
+**1. Google Play Developer Reporting API not enabled**
+
+Enable it in your Google Cloud project:
+[console.cloud.google.com/apis/library/playdeveloperreporting.googleapis.com](https://console.cloud.google.com/apis/library/playdeveloperreporting.googleapis.com)
+
+**2. Service account lacks per-app Reporting API access**
+
 1. Play Console → **Setup → API access** → find the service account → **Manage Play Console permissions**.
 2. Under **App permissions**, select the app and enable **View app information and download bulk reports (read-only)**.
 3. Save and wait a few minutes for the change to propagate.
