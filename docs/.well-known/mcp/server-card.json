@@ -1,0 +1,30 @@
+{
+  "name": "Google Play Console MCP",
+  "description": "Manage Google Play Store production releases from your AI assistant — promote builds, adjust rollout percentages, check review status, and fetch crash-rate vitals.",
+  "vendor": "agimaulana",
+  "version": "0.2.0",
+  "homepage": "https://github.com/AgiMaulana/GooglePlayConsoleMcp",
+  "license": "MIT",
+  "tools": [
+    {
+      "name": "promote_to_production",
+      "description": "Promote an app build from the internal track to production with a staged rollout."
+    },
+    {
+      "name": "check_review_status",
+      "description": "Check the current production release status (draft, inProgress, halted, completed) and rollout percentages."
+    },
+    {
+      "name": "update_rollout_percentage",
+      "description": "Update the rollout percentage for the current production release."
+    },
+    {
+      "name": "get_production_release_info",
+      "description": "Fetch the current production release info: rollout percentage, version codes, status, and release notes."
+    },
+    {
+      "name": "get_crash_rate",
+      "description": "Fetch user-perceived crash rate via the Google Play Developer Reporting API, broken down by version code."
+    }
+  ]
+}

@@ -3,6 +3,7 @@
 *.json
 !*example*.json
 !server.json
+!docs/**/*.json
 
 # Python
 __pycache__/
