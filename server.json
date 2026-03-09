@@ -6,7 +6,6 @@
   "packages": [
     {
       "registryType": "pypi",
-      "name": "google-play-mcp",
       "version": "0.3.0",
       "identifier": "google-play-mcp",
       "transport": { "type": "stdio" },
