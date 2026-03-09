@@ -216,7 +216,8 @@ class ReportingClient:
         app = self._app_path(package_name)
         url = f"{REPORTING_BASE_URL}/{app}/crashRateMetricSet:query"
 
-        end = datetime.now(timezone.utc)
+        # API data lags by 1 day; using today as endTime returns 400
+        end = datetime.now(timezone.utc) - timedelta(days=1)
         start = end - timedelta(days=days)
 
         def _date(dt: datetime) -> Dict[str, int]:
