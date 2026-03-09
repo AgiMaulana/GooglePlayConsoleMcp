@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Google Play Console MCP</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0d1117;
+      color: #e6edf3;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+    }
+    .card {
+      max-width: 640px;
+      width: 100%;
+      text-align: center;
+    }
+    .badge {
+      display: inline-block;
+      background: #1f6feb;
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      margin-bottom: 1.5rem;
+    }
+    h1 {
+      font-size: 2.25rem;
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 1rem;
+    }
+    h1 span { color: #3fb950; }
+    p.lead {
+      font-size: 1.1rem;
+      color: #8b949e;
+      line-height: 1.6;
+      margin-bottom: 2.5rem;
+    }
+    .install {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 1rem 1.25rem;
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 0.9rem;
+      color: #e6edf3;
+      text-align: left;
+      margin-bottom: 2rem;
+      position: relative;
+    }
+    .install .comment { color: #8b949e; }
+    .tools {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      margin-bottom: 2.5rem;
+      text-align: left;
+    }
+    .tool {
+      background: #161b22;
+      border: 1px solid #30363d;
+      border-radius: 8px;
+      padding: 0.75rem 1rem;
+    }
+    .tool-name {
+      font-family: "SFMono-Regular", Consolas, monospace;
+      font-size: 0.8rem;
+      color: #79c0ff;
+      margin-bottom: 0.25rem;
+    }
+    .tool-desc { font-size: 0.8rem; color: #8b949e; }
+    .links { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+    .link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.5rem 1.25rem;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      text-decoration: none;
+      transition: opacity 0.15s;
+    }
+    .link:hover { opacity: 0.8; }
+    .link-primary { background: #238636; color: #fff; }
+    .link-secondary { background: #21262d; color: #e6edf3; border: 1px solid #30363d; }
+    footer {
+      margin-top: 3rem;
+      font-size: 0.8rem;
+      color: #484f58;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">MCP Server</div>
+
+    <h1>Google Play Console <span>MCP</span></h1>
+    <p class="lead">
+      Let AI assistants manage your Play Store releases —
+      promote builds, adjust rollouts, check review status,
+      and monitor crash rates.
+    </p>
+
+    <div class="install">
+      <div class="comment"># Add to Claude (one command)</div>
+      <div>claude mcp add google-play-mcp \</div>
+      <div>&nbsp;&nbsp;-e GOOGLE_APPLICATION_CREDENTIALS=/path/to/key.json \</div>
+      <div>&nbsp;&nbsp;-- uvx google-play-mcp</div>
+    </div>
+
+    <div class="tools">
+      <div class="tool">
+        <div class="tool-name">promote_to_production</div>
+        <div class="tool-desc">Promote a build with a staged rollout %</div>
+      </div>
+      <div class="tool">
+        <div class="tool-name">check_review_status</div>
+        <div class="tool-desc">Check draft / inProgress / halted status</div>
+      </div>
+      <div class="tool">
+        <div class="tool-name">update_rollout_percentage</div>
+        <div class="tool-desc">Increase or complete a staged rollout</div>
+      </div>
+      <div class="tool">
+        <div class="tool-name">get_production_release_info</div>
+        <div class="tool-desc">Fetch version codes and release notes</div>
+      </div>
+      <div class="tool" style="grid-column: 1 / -1;">
+        <div class="tool-name">get_crash_rate</div>
+        <div class="tool-desc">Daily crash rate per version via Play Developer Reporting API</div>
+      </div>
+    </div>
+
+    <div class="links">
+      <a class="link link-primary" href="https://github.com/AgiMaulana/GooglePlayConsoleMcp">
+        GitHub
+      </a>
+      <a class="link link-secondary" href="https://pypi.org/project/google-play-mcp/">
+        PyPI
+      </a>
+      <a class="link link-secondary" href="https://registry.modelcontextprotocol.io/servers/io.github.AgiMaulana/google-play-mcp">
+        MCP Registry
+      </a>
+    </div>
+  </div>
+
+  <footer>MIT License &mdash; google-play-mcp v0.2.1</footer>
+</body>
+</html>
