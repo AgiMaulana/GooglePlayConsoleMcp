@@ -10,14 +10,34 @@ releases directly.
 
 ## Quick start
 
-**stdio — one command, no install:**
+### Option A — `uvx` (recommended, no install needed)
+
+Run this once. Claude automatically starts and stops the server for every session — you never have to touch it again.
+
 ```bash
 claude mcp add google-play-mcp \
   -e GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json \
   -- uvx google-play-mcp
 ```
 
-**HTTP — run as a local server:**
+> Requires `uv` — install with `brew install uv` or `curl -Lsf https://astral.sh/uv/install.sh | sh`
+
+### Option B — `pip install`
+
+If you prefer a permanent install:
+
+```bash
+pip install google-play-mcp
+
+claude mcp add google-play-mcp \
+  -e GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json \
+  -- google-play-mcp
+```
+
+### Option C — HTTP (local server)
+
+Only needed if you want to connect via HTTP transport instead of stdio:
+
 ```bash
 # Terminal 1 — start the server
 GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json \
@@ -27,7 +47,9 @@ GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account.json \
 claude mcp add --transport http google-play-mcp http://localhost:8080
 ```
 
-> Requires `uv` — install with `brew install uv` or `curl -Lsf https://astral.sh/uv/install.sh | sh`
+> **How stdio works:** With Options A and B, there is no server to start manually.
+> Claude launches the process in the background when a session opens and shuts it
+> down when the session ends. Zero maintenance.
 
 ---
 
