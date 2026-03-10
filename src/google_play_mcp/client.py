@@ -406,6 +406,22 @@ class PublisherClient:
     # Public: Tester Management
     # -----------------------------------------------------------------------
 
+    def publish_managed_release(self, package_name: str) -> Dict[str, Any]:
+        """Send approved changes live when Managed Publishing is enabled.
+
+        With Managed Publishing on, committed edits are held pending manual
+        approval and do NOT go live automatically. This calls the
+        managedPublishing.publish endpoint — equivalent to clicking
+        "Send changes live" in Google Play Console.
+
+        Has no effect if Managed Publishing is not enabled.
+        """
+        return (
+            self.service.managedPublishing()
+            .publish(packageName=package_name, body={})
+            .execute()
+        )
+
     def get_testers(self, package_name: str, track: str) -> Dict[str, Any]:
         """Get tester emails and Google Groups for an internal/closed testing track."""
         edit_id = self._create_edit(package_name)

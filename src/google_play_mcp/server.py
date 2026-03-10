@@ -203,6 +203,10 @@ def create_release(
         country_codes: Optional list of ISO 3166-1 alpha-2 country codes to
             restrict availability, e.g. ["US", "GB"]. Pass an empty list to
             remove country restrictions.
+
+    NOTE: If Managed Publishing is enabled in Google Play Console, this edit
+    will be committed but held pending approval — it will NOT go live
+    automatically. Call publish_managed_release after approval to send it live.
     """
     try:
         notes = _notes_from_dict(release_notes)
@@ -250,6 +254,10 @@ def update_release(
     - Complete rollout: update_release(pkg, rollout_percentage=100)
     - Halt a rollout: update_release(pkg, status="halted")
     - Resume a halted rollout: update_release(pkg, status="inProgress")
+
+    NOTE: If Managed Publishing is enabled in Google Play Console, this edit
+    will be committed but held pending approval — it will NOT go live
+    automatically. Call publish_managed_release after approval to send it live.
 
     Args:
         package_name: App package name, e.g. com.example.myapp
@@ -340,6 +348,38 @@ def promote_release(
                 ),
                 "track": _format_track(result["track"]),
                 "editId": result.get("commit", {}).get("editId"),
+            },
+            indent=2,
+        )
+    except Exception as exc:
+        return json.dumps({"success": False, "error": str(exc)}, indent=2)
+
+
+# ---------------------------------------------------------------------------
+# Tool: publish_managed_release
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def publish_managed_release(package_name: str) -> str:
+    """Send approved changes live when Managed Publishing is enabled.
+
+    If Managed Publishing is enabled in Google Play Console, edits committed
+    via create_release, update_release, or promote_release are held pending
+    approval and will NOT go live automatically. Call this tool after your
+    changes have been reviewed and approved in Play Console to make them live.
+
+    This is equivalent to clicking "Send changes live" in Google Play Console.
+    Has no effect if Managed Publishing is not enabled.
+
+    Args:
+        package_name: App package name, e.g. com.example.myapp
+    """
+    try:
+        _publisher().publish_managed_release(package_name)
+        return json.dumps(
+            {
+                "success": True,
+                "message": "Changes sent live successfully via Managed Publishing.",
             },
             indent=2,
         )
