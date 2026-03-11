@@ -88,6 +88,8 @@ claude mcp add --transport http google-play-mcp http://localhost:8080
 | `get_crash_rate` | Daily crash rate and user-perceived crash rate by version code |
 | `get_anr_rate` | Daily ANR rate and user-perceived ANR rate by version code |
 | `get_vitals_summary` | Combined crash + ANR overview with bad behavior threshold indicators |
+| `get_wakelock_rate` | Daily stuck background wake lock rate by version code (battery health) |
+| `get_wakeup_rate` | Daily excessive wakeup rate by version code (battery health) |
 
 ---
 
@@ -107,7 +109,7 @@ claude mcp add --transport http google-play-mcp http://localhost:8080
 | `upload_artifact`, `create_release`, `update_release`, `promote_release`, `update_testers` | **Release to production, exclude devices, and use app signing by Google Play** |
 | `upload_to_internal_sharing` | **Release to testing tracks** |
 | `list_tracks`, `get_track_info`, `list_artifacts`, `get_testers` | **View app information and download bulk reports (read-only)** |
-| `get_crash_rate`, `get_anr_rate`, `get_vitals_summary` | **View app information and download bulk reports (read-only)** + Reporting API enabled |
+| `get_crash_rate`, `get_anr_rate`, `get_vitals_summary`, `get_wakelock_rate`, `get_wakeup_rate` | **View app information and download bulk reports (read-only)** + Reporting API enabled |
 
 > **Important:** Release Manager does **not** grant Reporting API access. You must also enable
 > **View app information and download bulk reports (read-only)** — both at account level and
@@ -333,6 +335,33 @@ days         : int  — look-back window, 1–30 (default 7)
 Returns a combined crash + ANR summary aggregated per version code, with averages over
 the period and `exceedsCrashThreshold` / `exceedsAnrThreshold` flags. The latest version
 is highlighted as `latestVersionSummary`.
+
+### `get_wakelock_rate`
+
+```
+package_name : str
+days         : int  — look-back window, 1–30 (default 7)
+version_code : str  — optional single version code to filter
+```
+
+Returns daily `stuckBackgroundWakelockRate` and `distinctUsers` per version code.
+Relevant for 2026 Google Play battery health enforcement — apps with an excessive
+proportion of sessions holding a partial wake lock for more than 1 hour in the background
+may be penalized.
+
+---
+
+### `get_wakeup_rate`
+
+```
+package_name : str
+days         : int  — look-back window, 1–30 (default 7)
+version_code : str  — optional single version code to filter
+```
+
+Returns daily `excessiveWakeupRate` and `distinctUsers` per version code.
+Relevant for 2026 Google Play battery health enforcement — apps that wake the CPU too
+frequently (above platform thresholds) may be penalized.
 
 ---
 
