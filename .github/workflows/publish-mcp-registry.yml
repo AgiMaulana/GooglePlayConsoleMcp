@@ -9,6 +9,9 @@ jobs:
   publish:
     name: Publish server.json to MCP Registry
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # Mandatory for OIDC
     steps:
       - uses: actions/checkout@v4
       - name: Install MCP Publisher
