@@ -1,30 +1,70 @@
 {
   "name": "Google Play Console MCP",
-  "description": "Manage Google Play Store production releases from your AI assistant — promote builds, adjust rollout percentages, check review status, and fetch crash-rate vitals.",
+  "description": "Manage the full Google Play Store release lifecycle from your AI assistant — upload artifacts, create and promote releases across all tracks, manage testers, adjust rollout percentages, and fetch Android Vitals (crash rate, ANR rate, wakelock rate, wakeup rate).",
   "vendor": "agimaulana",
-  "version": "0.2.0",
+  "version": "0.5.0",
   "homepage": "https://github.com/AgiMaulana/GooglePlayConsoleMcp",
   "license": "MIT",
   "tools": [
     {
-      "name": "promote_to_production",
-      "description": "Promote an app build from the internal track to production with a staged rollout."
+      "name": "list_tracks",
+      "description": "List all available release tracks (internal, alpha, beta, production) with their current releases and country availability."
     },
     {
-      "name": "check_review_status",
-      "description": "Check the current production release status (draft, inProgress, halted, completed) and rollout percentages."
+      "name": "get_track_info",
+      "description": "Get detailed info for a specific release track including release status, version codes, rollout percentage, and release notes."
     },
     {
-      "name": "update_rollout_percentage",
-      "description": "Update the rollout percentage for the current production release."
+      "name": "create_release",
+      "description": "Create a new release on a given track with specified version codes, release notes, and optional staged rollout percentage."
     },
     {
-      "name": "get_production_release_info",
-      "description": "Fetch the current production release info: rollout percentage, version codes, status, and release notes."
+      "name": "update_release",
+      "description": "Update an existing release on a track — change rollout percentage, status, or release notes."
+    },
+    {
+      "name": "promote_release",
+      "description": "Promote a release from one track to another (e.g. internal → alpha → beta → production) with an optional staged rollout."
+    },
+    {
+      "name": "list_artifacts",
+      "description": "List all APKs and AABs (Android App Bundles) currently uploaded to the app, with their version codes and SHA hashes."
+    },
+    {
+      "name": "upload_artifact",
+      "description": "Upload an APK or AAB file to Google Play and optionally assign it to a track in one step."
+    },
+    {
+      "name": "upload_to_internal_sharing",
+      "description": "Upload an APK or AAB to Internal App Sharing for quick distribution to testers without going through a full release."
+    },
+    {
+      "name": "get_testers",
+      "description": "Get the list of tester email addresses for a specific track."
+    },
+    {
+      "name": "update_testers",
+      "description": "Add or replace the tester list for a specific track."
     },
     {
       "name": "get_crash_rate",
-      "description": "Fetch user-perceived crash rate via the Google Play Developer Reporting API, broken down by version code."
+      "description": "Fetch the user-perceived crash rate from the Play Developer Reporting API, optionally filtered by date range and broken down by version code."
+    },
+    {
+      "name": "get_anr_rate",
+      "description": "Fetch the ANR (Application Not Responding) rate from the Play Developer Reporting API, optionally filtered by date range."
+    },
+    {
+      "name": "get_vitals_summary",
+      "description": "Get a combined summary of crash rate and ANR rate vitals for a quick app health overview."
+    },
+    {
+      "name": "get_wakelock_rate",
+      "description": "Fetch the stuck partial wakelock rate from the Play Developer Reporting API to detect battery drain issues."
+    },
+    {
+      "name": "get_wakeup_rate",
+      "description": "Fetch the excessive wakeup rate from the Play Developer Reporting API to detect apps that wake the CPU too frequently."
     }
   ]
 }
