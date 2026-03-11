@@ -81,10 +81,13 @@ def _parse_reporting_rows(rows: list) -> list:
             name = m.get("metric")
             val = m.get("decimalValue") or m.get("int64Value")
             if val is not None:
+                # decimalValue is a Decimal message serialized as {"value": "0.001234"}
+                if isinstance(val, dict):
+                    val = val.get("value")
                 try:
                     val = float(val)
                 except (TypeError, ValueError):
-                    pass
+                    val = None
             metrics[name] = val
         parsed.append({
             "date": row.get("startTime", {}),
@@ -741,6 +744,121 @@ def get_anr_rate(
 
 
 # ---------------------------------------------------------------------------
+# Tool: get_wakelock_rate
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def get_wakelock_rate(
+    package_name: str,
+    days: int = 7,
+    version_code: str = "",
+) -> str:
+    """Fetch stuck background wake lock rate from Android Vitals.
+
+    Uses the Google Play Developer Reporting API v1beta1.
+    Returns daily stuckBackgroundWakelockRate and distinctUsers broken down
+    by version code for the requested period.
+
+    Relevant for 2026 Google Play battery health enforcement. Apps with an
+    excessive proportion of sessions holding a partial wake lock for more
+    than 1 hour in the background may be penalized.
+
+    Args:
+        package_name: App package name, e.g. com.example.myapp
+        days: Number of past days to include (default 7, max 30).
+        version_code: Optional single version code to filter results.
+    """
+    days = max(1, min(days, 30))
+    try:
+        raw = _reporting().query_wakelock_rate(
+            package_name=package_name,
+            days=days,
+            version_code=version_code or None,
+        )
+        rows = _parse_reporting_rows(raw.get("rows", []))
+        if not rows:
+            return json.dumps(
+                {
+                    "packageName": package_name,
+                    "message": (
+                        "No stuck wakelock data available. Data may lag up to 2 days "
+                        "or the app has no wakelock violations in this period."
+                    ),
+                    "rows": [],
+                },
+                indent=2,
+            )
+        return json.dumps(
+            {
+                "packageName": package_name,
+                "periodDays": days,
+                "totalRows": len(rows),
+                "rows": rows,
+            },
+            indent=2,
+        )
+    except Exception as exc:
+        return json.dumps({"success": False, "error": str(exc)}, indent=2)
+
+
+# ---------------------------------------------------------------------------
+# Tool: get_wakeup_rate
+# ---------------------------------------------------------------------------
+
+@mcp.tool()
+def get_wakeup_rate(
+    package_name: str,
+    days: int = 7,
+    version_code: str = "",
+) -> str:
+    """Fetch excessive wakeup rate from Android Vitals.
+
+    Uses the Google Play Developer Reporting API v1beta1.
+    Returns daily excessiveWakeupRate and distinctUsers broken down by
+    version code for the requested period.
+
+    Relevant for 2026 Google Play battery health enforcement. Apps that
+    wake the CPU too frequently (above platform thresholds) may be penalized.
+
+    Args:
+        package_name: App package name, e.g. com.example.myapp
+        days: Number of past days to include (default 7, max 30).
+        version_code: Optional single version code to filter results.
+    """
+    days = max(1, min(days, 30))
+    try:
+        raw = _reporting().query_wakeup_rate(
+            package_name=package_name,
+            days=days,
+            version_code=version_code or None,
+        )
+        rows = _parse_reporting_rows(raw.get("rows", []))
+        if not rows:
+            return json.dumps(
+                {
+                    "packageName": package_name,
+                    "message": (
+                        "No excessive wakeup data available. Data may lag up to 2 days "
+                        "or the app has no wakeup violations in this period."
+                    ),
+                    "rows": [],
+                },
+                indent=2,
+            )
+        return json.dumps(
+            {
+                "packageName": package_name,
+                "periodDays": days,
+                "totalRows": len(rows),
+                "rows": rows,
+            },
+            indent=2,
+        )
+    except Exception as exc:
+        return json.dumps({"success": False, "error": str(exc)}, indent=2)
+
+
+# ---------------------------------------------------------------------------
 # Tool: get_vitals_summary
 # ---------------------------------------------------------------------------
 
@@ -773,11 +891,11 @@ def get_vitals_summary(
             for row in rows:
                 vc = row.get("versionCode") or "unknown"
                 entry = by_version.setdefault(vc, {"values": [], "perceived": [], "users": []})
-                if row.get(rate_key) is not None:
+                if isinstance(row.get(rate_key), (int, float)):
                     entry["values"].append(row[rate_key])
-                if row.get(perceived_key) is not None:
+                if isinstance(row.get(perceived_key), (int, float)):
                     entry["perceived"].append(row[perceived_key])
-                if row.get("distinctUsers") is not None:
+                if isinstance(row.get("distinctUsers"), (int, float)):
                     entry["users"].append(row["distinctUsers"])
             result = {}
             for vc, data in by_version.items():

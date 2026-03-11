@@ -510,7 +510,7 @@ class ReportingClient:
     ) -> Dict[str, Any]:
         return self._query_metric_set(
             package_name,
-            "crashRateMetricSet",
+            "vitals/crashrate",
             ["crashRate", "userPerceivedCrashRate", "distinctUsers"],
             days,
             version_code,
@@ -524,8 +524,36 @@ class ReportingClient:
     ) -> Dict[str, Any]:
         return self._query_metric_set(
             package_name,
-            "anrRateMetricSet",
+            "vitals/anrrate",
             ["anrRate", "userPerceivedAnrRate", "distinctUsers"],
+            days,
+            version_code,
+        )
+
+    def query_wakelock_rate(
+        self,
+        package_name: str,
+        days: int = 7,
+        version_code: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        return self._query_metric_set(
+            package_name,
+            "vitals/stuckbackgroundwakelockrate",
+            ["stuckBackgroundWakelockRate", "distinctUsers"],
+            days,
+            version_code,
+        )
+
+    def query_wakeup_rate(
+        self,
+        package_name: str,
+        days: int = 7,
+        version_code: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        return self._query_metric_set(
+            package_name,
+            "vitals/excessivewakeuprate",
+            ["excessiveWakeupRate", "distinctUsers"],
             days,
             version_code,
         )
