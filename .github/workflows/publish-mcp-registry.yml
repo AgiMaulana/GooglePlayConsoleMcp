@@ -11,20 +11,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      - name: Publish to MCP Registry
+      - name: Install MCP Publisher
         run: |
-          response=$(curl -s -w "\n%{http_code}" -X POST \
-            https://registry.modelcontextprotocol.io/v0/publish \
-            -H "Authorization: Bearer ${{ secrets.MCP_REGISTRY_TOKEN }}" \
-            -H "Content-Type: application/json" \
-            --data-binary @server.json)
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper|' '[:lower|')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz
+      
+      - name: Authenticate & Publish
+        run: |
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish
 
-          body=$(echo "$response" | head -n -1)
-          status=$(echo "$response" | tail -n 1)
-
-          echo "$body"
-          if [ "$status" -lt 200 ] || [ "$status" -ge 300 ]; then
-            echo "::error::MCP Registry publish failed with HTTP $status"
-            exit 1
-          fi
+          
