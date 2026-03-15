@@ -103,13 +103,13 @@ def _parse_reporting_rows(rows: list) -> list:
 
 @mcp.tool()
 def list_tracks(package_name: str) -> str:
-    """List all release tracks and their current releases.
+    """List all release tracks with their current releases.
 
-    Returns all tracks (internal, alpha/closed, beta/open, production) with
-    their releases, rollout percentages, statuses, and country availability.
+    Returns tracks (internal, alpha, beta, production) with rollout
+    percentages, statuses, and country availability.
 
     Args:
-        package_name: App package name, e.g. com.example.myapp
+        package_name: Package name, e.g. com.example.myapp
     """
     try:
         data = _publisher().list_tracks(package_name)
@@ -131,15 +131,14 @@ def get_track_info(
     package_name: str,
     track: str = "production",
 ) -> str:
-    """Get detailed information for a specific release track.
+    """Get detailed info for a specific release track.
 
-    Returns releases with status, rollout percentage, version codes, release
-    notes, and country availability for the track.
+    Returns releases with status, rollout %, version codes, release notes,
+    and country availability.
 
     Args:
-        package_name: App package name, e.g. com.example.myapp
-        track: Track name — "internal", "alpha", "beta", or "production".
-            Defaults to "production".
+        package_name: Package name, e.g. com.example.myapp
+        track: "internal", "alpha", "beta", or "production". Default "production".
     """
     try:
         track_data = _publisher().get_track(package_name, track)
@@ -185,31 +184,20 @@ def create_release(
     release_notes: Optional[dict] = None,
     country_codes: Optional[list[str]] = None,
 ) -> str:
-    """Create or replace a release on any track.
+    """Create or replace a release on a track.
 
-    Use this to publish a build to internal testing, closed testing (alpha),
-    open testing (beta), or production. The release replaces any existing
-    release on the track for the given version codes.
+    NOTE: With Managed Publishing enabled, the edit is held pending approval.
+    Call publish_managed_release to send live.
 
     Args:
-        package_name: App package name, e.g. com.example.myapp
-        track: Target track — "internal", "alpha", "beta", or "production".
-        version_codes: List of version codes to include, e.g. [1234].
-        rollout_percentage: Percentage of users to roll out to when status is
-            "inProgress". Default 10%. Ignored for other statuses.
-        status: Release status — "draft" (default, saves without releasing),
-            "inProgress" (staged rollout using rollout_percentage),
-            "halted", or "completed" (release to all users immediately).
-        release_name: Optional human-readable release name.
-        release_notes: Optional dict of release notes keyed by language code,
-            e.g. {"en-US": "Bug fixes", "fr-FR": "Corrections de bugs"}.
-        country_codes: Optional list of ISO 3166-1 alpha-2 country codes to
-            restrict availability, e.g. ["US", "GB"]. Pass an empty list to
-            remove country restrictions.
-
-    NOTE: If Managed Publishing is enabled in Google Play Console, this edit
-    will be committed but held pending approval — it will NOT go live
-    automatically. Call publish_managed_release after approval to send it live.
+        package_name: Package name, e.g. com.example.myapp
+        track: "internal", "alpha", "beta", or "production".
+        version_codes: Version codes to include, e.g. [1234].
+        rollout_percentage: Rollout % when status is "inProgress". Default 10%.
+        status: "draft" (default), "inProgress" (staged), "halted", or "completed".
+        release_name: Optional human-readable name.
+        release_notes: Optional {lang: text} dict, e.g. {"en-US": "Bug fixes"}.
+        country_codes: Optional ISO 3166-1 alpha-2 codes. Empty list removes restrictions.
     """
     try:
         notes = _notes_from_dict(release_notes)
@@ -250,28 +238,20 @@ def update_release(
     status: Optional[str] = None,
     version_codes: Optional[list[int]] = None,
 ) -> str:
-    """Update the rollout percentage and/or status of an existing release.
+    """Update rollout percentage and/or status of an existing release.
 
-    Use this to:
-    - Increase rollout: update_release(pkg, rollout_percentage=50)
-    - Complete rollout: update_release(pkg, rollout_percentage=100)
-    - Halt a rollout: update_release(pkg, status="halted")
-    - Resume a halted rollout: update_release(pkg, status="inProgress")
+    Examples: increase rollout (rollout_percentage=50), complete (=100),
+    halt (status="halted"), resume (status="inProgress").
 
-    NOTE: If Managed Publishing is enabled in Google Play Console, this edit
-    will be committed but held pending approval — it will NOT go live
-    automatically. Call publish_managed_release after approval to send it live.
+    NOTE: With Managed Publishing enabled, changes are held pending approval.
+    Call publish_managed_release to send live.
 
     Args:
-        package_name: App package name, e.g. com.example.myapp
-        track: Track to update. Defaults to "production".
-        rollout_percentage: New rollout percentage (0 < value <= 100). Pass
-            100 to complete the rollout for all users.
-        status: New status — "inProgress", "halted", "completed", or "draft".
-            If both rollout_percentage and status are provided, status takes
-            precedence for the status field.
-        version_codes: Optional filter — only updates a release containing
-            these version codes. If omitted, updates the first release found.
+        package_name: Package name, e.g. com.example.myapp
+        track: Track to update. Default "production".
+        rollout_percentage: New rollout % (0–100). Pass 100 to complete.
+        status: "inProgress", "halted", "completed", or "draft".
+        version_codes: Filter to release containing these codes. Default: first release found.
     """
     try:
         result = _publisher().update_release(
@@ -310,26 +290,17 @@ def promote_release(
 ) -> str:
     """Promote a release from one track to another.
 
-    Copies the specified version codes from the source track to the
-    destination track. Release notes and name are inherited from the
-    source release unless explicitly overridden.
-
-    Common flows:
-    - internal → alpha (closed testing)
-    - alpha → beta (open testing)
-    - beta → production (with staged rollout)
-    - internal → production
+    Copies version codes from source to destination. Common: internal→alpha→beta→production.
+    Release notes/name are inherited unless overridden.
 
     Args:
-        package_name: App package name, e.g. com.example.myapp
-        from_track: Source track — "internal", "alpha", or "beta".
-        to_track: Destination track — "alpha", "beta", or "production".
+        package_name: Package name, e.g. com.example.myapp
+        from_track: Source — "internal", "alpha", or "beta".
+        to_track: Destination — "alpha", "beta", or "production".
         version_codes: Version codes to promote, e.g. [1234].
-        rollout_percentage: Rollout percentage for the destination track.
-            Default 10%. Use 100 for an immediate full release.
-        release_name: Optional override for the release name.
-        release_notes: Optional override for release notes as a dict keyed
-            by language code, e.g. {"en-US": "New features"}.
+        rollout_percentage: Rollout % at destination. Default 10%. Use 100 for full release.
+        release_name: Optional name override.
+        release_notes: Optional {lang: text} override, e.g. {"en-US": "New features"}.
     """
     try:
         notes = _notes_from_dict(release_notes)
@@ -366,16 +337,11 @@ def promote_release(
 def publish_managed_release(package_name: str) -> str:
     """Send approved changes live when Managed Publishing is enabled.
 
-    If Managed Publishing is enabled in Google Play Console, edits committed
-    via create_release, update_release, or promote_release are held pending
-    approval and will NOT go live automatically. Call this tool after your
-    changes have been reviewed and approved in Play Console to make them live.
-
-    This is equivalent to clicking "Send changes live" in Google Play Console.
-    Has no effect if Managed Publishing is not enabled.
+    Call after changes committed via create_release/update_release/promote_release
+    have been reviewed in Play Console. No-op if Managed Publishing is off.
 
     Args:
-        package_name: App package name, e.g. com.example.myapp
+        package_name: Package name, e.g. com.example.myapp
     """
     try:
         _publisher().publish_managed_release(package_name)
@@ -398,11 +364,11 @@ def publish_managed_release(package_name: str) -> str:
 def list_artifacts(package_name: str) -> str:
     """List all APKs and AABs uploaded to the app.
 
-    Returns version codes, SHA hashes, and upload details for all artifacts.
-    Useful for finding which version codes are available to assign to a track.
+    Returns version codes and SHA hashes. Useful for finding version codes
+    available to assign to a track.
 
     Args:
-        package_name: App package name, e.g. com.example.myapp
+        package_name: Package name, e.g. com.example.myapp
     """
     try:
         data = _publisher().list_artifacts(package_name)
@@ -456,22 +422,17 @@ def upload_artifact(
 ) -> str:
     """Upload an APK or AAB and create a release on the given track.
 
-    The file type is auto-detected from the extension (.apk or .aab).
-    The upload and track assignment happen in a single atomic operation.
+    File type auto-detected from extension (.apk/.aab). Upload and track
+    assignment are atomic.
 
     Args:
-        package_name: App package name, e.g. com.example.myapp
-        file_path: Absolute local path to the APK or AAB file.
-        track: Track to release on — "internal" (default), "alpha", "beta",
-            or "production".
-        status: Release status — "draft" (default), "inProgress", or
-            "completed". For production with staged rollout use "inProgress"
-            with rollout_percentage.
-        rollout_percentage: Rollout percentage when status is "inProgress".
-            Default 10%.
-        release_name: Optional human-readable release name.
-        release_notes: Optional dict of release notes keyed by language code,
-            e.g. {"en-US": "Initial release"}.
+        package_name: Package name, e.g. com.example.myapp
+        file_path: Absolute local path to the APK or AAB.
+        track: "internal" (default), "alpha", "beta", or "production".
+        status: "draft" (default), "inProgress", or "completed".
+        rollout_percentage: Rollout % when status is "inProgress". Default 10%.
+        release_name: Optional human-readable name.
+        release_notes: Optional {lang: text} dict, e.g. {"en-US": "Initial release"}.
     """
     try:
         notes = _notes_from_dict(release_notes)
@@ -511,15 +472,14 @@ def upload_to_internal_sharing(
     package_name: str,
     file_path: str,
 ) -> str:
-    """Upload an APK or AAB to Internal App Sharing and get a shareable link.
+    """Upload APK or AAB to Internal App Sharing and get a shareable link.
 
-    Internal App Sharing lets you share a specific build directly with testers
-    via a URL, without assigning it to any release track. Ideal for quick
-    one-off testing. File type is auto-detected from the extension (.apk/.aab).
+    Shares a build via URL without assigning it to a track. Ideal for quick
+    one-off testing. File type auto-detected from extension (.apk/.aab).
 
     Args:
-        package_name: App package name, e.g. com.example.myapp
-        file_path: Absolute local path to the APK or AAB file.
+        package_name: Package name, e.g. com.example.myapp
+        file_path: Absolute local path to the APK or AAB.
     """
     try:
         result = _publisher().upload_to_internal_sharing(
@@ -552,14 +512,11 @@ def get_testers(
     package_name: str,
     track: str = "internal",
 ) -> str:
-    """Get the list of testers for an internal or closed testing track.
-
-    Returns tester email addresses and Google Groups configured for the track.
-    Only applicable to "internal" and closed testing (alpha) tracks.
+    """Get tester emails and Google Groups for an internal or alpha track.
 
     Args:
-        package_name: App package name, e.g. com.example.myapp
-        track: Track to query — "internal" (default) or "alpha".
+        package_name: Package name, e.g. com.example.myapp
+        track: "internal" (default) or "alpha".
     """
     try:
         data = _publisher().get_testers(package_name, track)
@@ -587,22 +544,16 @@ def update_testers(
     emails: Optional[list[str]] = None,
     google_groups: Optional[list[str]] = None,
 ) -> str:
-    """Replace the tester list for an internal or closed testing track.
+    """Replace the tester list for an internal or alpha track.
 
-    WARNING: This is a full replacement. Testers not included in the new
-    list will lose access to the track. To add testers, first call
-    get_testers to retrieve the current list and include them in the update.
-
-    Only applicable to "internal" and closed testing (alpha) tracks.
-    Open testing (beta) and production use rollout percentages instead.
+    WARNING: Full replacement — omitted testers lose access.
+    Call get_testers first to preserve existing testers.
 
     Args:
-        package_name: App package name, e.g. com.example.myapp
-        track: Track to update — "internal" (default) or "alpha".
-        emails: List of tester email addresses. Pass an empty list to remove
-            all individual testers.
-        google_groups: List of Google Group email addresses for tester groups.
-            Pass an empty list to remove all groups.
+        package_name: Package name, e.g. com.example.myapp
+        track: "internal" (default) or "alpha".
+        emails: Tester email addresses. Empty list removes all individuals.
+        google_groups: Google Group addresses. Empty list removes all groups.
     """
     try:
         result = _publisher().update_testers(
@@ -637,19 +588,16 @@ def get_crash_rate(
     days: int = 7,
     version_code: str = "",
 ) -> str:
-    """Fetch user-perceived crash rate for the app from Android Vitals.
+    """Fetch user-perceived crash rate from Android Vitals.
 
-    Uses the Google Play Developer Reporting API v1beta1.
-    Returns daily crashRate, userPerceivedCrashRate, and distinctUsers
-    broken down by version code for the requested period.
-
-    Google's "bad behavior threshold" for user-perceived crash rate is ~1.09%.
-    Apps exceeding this may be penalized in Play Store ranking.
+    Returns daily crashRate, userPerceivedCrashRate, and distinctUsers by
+    version code. Bad behavior threshold: userPerceivedCrashRate > 1.09%
+    may cause Play Store ranking penalties.
 
     Args:
-        package_name: App package name, e.g. com.example.myapp
-        days: Number of past days to include (default 7, max 30).
-        version_code: Optional single version code to filter results.
+        package_name: Package name, e.g. com.example.myapp
+        days: Past days to include (default 7, max 30).
+        version_code: Optional version code filter.
     """
     days = max(1, min(days, 30))
     try:
@@ -697,17 +645,14 @@ def get_anr_rate(
 ) -> str:
     """Fetch ANR (Application Not Responding) rate from Android Vitals.
 
-    Uses the Google Play Developer Reporting API v1beta1.
-    Returns daily anrRate, userPerceivedAnrRate, and distinctUsers broken
-    down by version code for the requested period.
-
-    Google's "bad behavior threshold" for user-perceived ANR rate is ~0.47%.
-    Apps exceeding this may be penalized in Play Store ranking.
+    Returns daily anrRate, userPerceivedAnrRate, and distinctUsers by version
+    code. Bad behavior threshold: userPerceivedAnrRate > 0.47% may cause
+    Play Store ranking penalties.
 
     Args:
-        package_name: App package name, e.g. com.example.myapp
-        days: Number of past days to include (default 7, max 30).
-        version_code: Optional single version code to filter results.
+        package_name: Package name, e.g. com.example.myapp
+        days: Past days to include (default 7, max 30).
+        version_code: Optional version code filter.
     """
     days = max(1, min(days, 30))
     try:
@@ -755,18 +700,13 @@ def get_wakelock_rate(
 ) -> str:
     """Fetch stuck background wake lock rate from Android Vitals.
 
-    Uses the Google Play Developer Reporting API v1beta1.
-    Returns daily stuckBackgroundWakelockRate and distinctUsers broken down
-    by version code for the requested period.
-
-    Relevant for 2026 Google Play battery health enforcement. Apps with an
-    excessive proportion of sessions holding a partial wake lock for more
-    than 1 hour in the background may be penalized.
+    Returns daily stuckBackgroundWakelockRate and distinctUsers by version
+    code. Excessive wakelock holding (>1 hour in background) may be penalized.
 
     Args:
-        package_name: App package name, e.g. com.example.myapp
-        days: Number of past days to include (default 7, max 30).
-        version_code: Optional single version code to filter results.
+        package_name: Package name, e.g. com.example.myapp
+        days: Past days to include (default 7, max 30).
+        version_code: Optional version code filter.
     """
     days = max(1, min(days, 30))
     try:
@@ -811,19 +751,15 @@ def get_wakeup_rate(
     days: int = 7,
     version_code: str = "",
 ) -> str:
-    """Fetch excessive wakeup rate from Android Vitals.
+    """Fetch excessive CPU wakeup rate from Android Vitals.
 
-    Uses the Google Play Developer Reporting API v1beta1.
-    Returns daily excessiveWakeupRate and distinctUsers broken down by
-    version code for the requested period.
-
-    Relevant for 2026 Google Play battery health enforcement. Apps that
-    wake the CPU too frequently (above platform thresholds) may be penalized.
+    Returns daily excessiveWakeupRate and distinctUsers by version code.
+    Frequent CPU wakeups above platform thresholds may be penalized.
 
     Args:
-        package_name: App package name, e.g. com.example.myapp
-        days: Number of past days to include (default 7, max 30).
-        version_code: Optional single version code to filter results.
+        package_name: Package name, e.g. com.example.myapp
+        days: Past days to include (default 7, max 30).
+        version_code: Optional version code filter.
     """
     days = max(1, min(days, 30))
     try:
@@ -867,15 +803,14 @@ def get_vitals_summary(
     package_name: str,
     days: int = 7,
 ) -> str:
-    """Get a combined Android Vitals summary: crash rate and ANR rate.
+    """Get combined Android Vitals: crash rate and ANR rate per version code.
 
-    Fetches both crash and ANR metrics and returns a per-version-code
-    summary with averages over the period. Highlights the latest version's
-    rates against Google's bad behavior thresholds.
+    Returns averages over the period with threshold flags.
+    Thresholds: userPerceivedCrashRate > 1.09%, userPerceivedAnrRate > 0.47%.
 
     Args:
-        package_name: App package name, e.g. com.example.myapp
-        days: Number of past days to include (default 7, max 30).
+        package_name: Package name, e.g. com.example.myapp
+        days: Past days to include (default 7, max 30).
     """
     days = max(1, min(days, 30))
     try:
