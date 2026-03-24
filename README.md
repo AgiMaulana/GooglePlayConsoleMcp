@@ -1,5 +1,8 @@
 # Google Play Console MCP
 
+[![Google Play Console MCP server](https://glama.ai/mcp/servers/AgiMaulana/GooglePlayConsoleMcp/badges/card.svg)](https://glama.ai/mcp/servers/AgiMaulana/GooglePlayConsoleMcp)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
 A Python [Model Context Protocol](https://modelcontextprotocol.io/) server that
 lets AI assistants (Claude, etc.) manage the full Google Play Store release
 lifecycle directly — from uploading artifacts to managing testers, rollouts,
