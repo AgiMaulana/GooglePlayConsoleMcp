@@ -1,7 +1,9 @@
 # Google Play Console MCP
 
 [![Google Play Console MCP server](https://glama.ai/mcp/servers/AgiMaulana/GooglePlayConsoleMcp/badges/card.svg)](https://glama.ai/mcp/servers/AgiMaulana/GooglePlayConsoleMcp)
+
 [![GooglePlayConsoleMcp MCP server](https://glama.ai/mcp/servers/AgiMaulana/GooglePlayConsoleMcp/badges/score.svg)](https://glama.ai/mcp/servers/AgiMaulana/GooglePlayConsoleMcp)
+[![MCP Badge](https://lobehub.com/badge/mcp/agimaulana-googleplayconsolemcp)](https://lobehub.com/mcp/agimaulana-googleplayconsolemcp)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A Python [Model Context Protocol](https://modelcontextprotocol.io/) server that
