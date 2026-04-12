@@ -4,7 +4,6 @@ Exposes Google Play Console operations as MCP tools so AI assistants
 (Claude, etc.) can manage the full app release lifecycle programmatically.
 """
 
-import json
 import os
 from typing import Optional
 
@@ -40,10 +39,13 @@ def _reporting() -> ReportingClient:
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _format_release(release: dict) -> dict:
     fraction = release.get("userFraction")
-    rollout_pct = round(fraction * 100, 2) if fraction is not None else (
-        100.0 if release.get("status") == "completed" else None
+    rollout_pct = (
+        round(fraction * 100, 2)
+        if fraction is not None
+        else (100.0 if release.get("status") == "completed" else None)
     )
     return {
         "name": release.get("name"),
@@ -89,11 +91,13 @@ def _parse_reporting_rows(rows: list) -> list:
                 except (TypeError, ValueError):
                     val = None
             metrics[name] = val
-        parsed.append({
-            "date": row.get("startTime", {}),
-            "versionCode": dims.get("versionCode"),
-            **metrics,
-        })
+        parsed.append(
+            {
+                "date": row.get("startTime", {}),
+                "versionCode": dims.get("versionCode"),
+                **metrics,
+            }
+        )
     return parsed
 
 
@@ -101,8 +105,9 @@ def _parse_reporting_rows(rows: list) -> list:
 # Tool: list_tracks
 # ---------------------------------------------------------------------------
 
+
 @mcp.tool()
-def list_tracks(package_name: str) -> str:
+def list_tracks(package_name: str) -> dict:
     """List all release tracks with their current releases.
 
     Returns tracks (internal, alpha, beta, production) with rollout
@@ -114,23 +119,21 @@ def list_tracks(package_name: str) -> str:
     try:
         data = _publisher().list_tracks(package_name)
         tracks = [_format_track(t) for t in data.get("tracks", [])]
-        return json.dumps(
-            {"packageName": package_name, "tracks": tracks},
-            indent=2,
-        )
+        return {"packageName": package_name, "tracks": tracks}
     except Exception as exc:
-        return json.dumps({"success": False, "error": str(exc)}, indent=2)
+        return {"success": False, "error": str(exc)}
 
 
 # ---------------------------------------------------------------------------
 # Tool: get_track_info
 # ---------------------------------------------------------------------------
 
+
 @mcp.tool()
 def get_track_info(
     package_name: str,
     track: str = "production",
-) -> str:
+) -> dict:
     """Get detailed info for a specific release track.
 
     Returns releases with status, rollout %, version codes, release notes,
@@ -155,23 +158,23 @@ def get_track_info(
         elif statuses == {"completed"}:
             summary = "Release fully rolled out (100%)."
         else:
-            summary = f"Status: {', '.join(statuses)}" if statuses else "No active releases."
+            summary = (
+                f"Status: {', '.join(statuses)}" if statuses else "No active releases."
+            )
 
-        return json.dumps(
-            {
-                "packageName": package_name,
-                "summary": summary,
-                **formatted,
-            },
-            indent=2,
-        )
+        return {
+            "packageName": package_name,
+            "summary": summary,
+            **formatted,
+        }
     except Exception as exc:
-        return json.dumps({"success": False, "error": str(exc)}, indent=2)
+        return {"success": False, "error": str(exc)}
 
 
 # ---------------------------------------------------------------------------
 # Tool: create_release
 # ---------------------------------------------------------------------------
+
 
 @mcp.tool()
 def create_release(
@@ -183,7 +186,7 @@ def create_release(
     release_name: str = "",
     release_notes: Optional[dict] = None,
     country_codes: Optional[list[str]] = None,
-) -> str:
+) -> dict:
     """Create or replace a release on a track.
 
     NOTE: With Managed Publishing enabled, the edit is held pending approval.
@@ -211,24 +214,20 @@ def create_release(
             status=status,
             country_codes=country_codes,
         )
-        return json.dumps(
-            {
-                "success": True,
-                "message": (
-                    f"Release created on '{track}' track with status '{status}'."
-                ),
-                "track": _format_track(result["track"]),
-                "editId": result.get("commit", {}).get("editId"),
-            },
-            indent=2,
-        )
+        return {
+            "success": True,
+            "message": (f"Release created on '{track}' track with status '{status}'."),
+            "track": _format_track(result["track"]),
+            "editId": result.get("commit", {}).get("editId"),
+        }
     except Exception as exc:
-        return json.dumps({"success": False, "error": str(exc)}, indent=2)
+        return {"success": False, "error": str(exc)}
 
 
 # ---------------------------------------------------------------------------
 # Tool: update_release
 # ---------------------------------------------------------------------------
+
 
 @mcp.tool()
 def update_release(
@@ -237,7 +236,7 @@ def update_release(
     rollout_percentage: Optional[float] = None,
     status: Optional[str] = None,
     version_codes: Optional[list[int]] = None,
-) -> str:
+) -> dict:
     """Update rollout percentage and/or status of an existing release.
 
     Examples: increase rollout (rollout_percentage=50), complete (=100),
@@ -261,22 +260,20 @@ def update_release(
             version_codes=version_codes,
             status=status,
         )
-        return json.dumps(
-            {
-                "success": True,
-                "message": "Release updated successfully.",
-                "track": _format_track(result["track"]),
-                "editId": result.get("commit", {}).get("editId"),
-            },
-            indent=2,
-        )
+        return {
+            "success": True,
+            "message": "Release updated successfully.",
+            "track": _format_track(result["track"]),
+            "editId": result.get("commit", {}).get("editId"),
+        }
     except Exception as exc:
-        return json.dumps({"success": False, "error": str(exc)}, indent=2)
+        return {"success": False, "error": str(exc)}
 
 
 # ---------------------------------------------------------------------------
 # Tool: promote_release
 # ---------------------------------------------------------------------------
+
 
 @mcp.tool()
 def promote_release(
@@ -287,7 +284,7 @@ def promote_release(
     rollout_percentage: float = 10.0,
     release_name: str = "",
     release_notes: Optional[dict] = None,
-) -> str:
+) -> dict:
     """Promote a release from one track to another.
 
     Copies version codes from source to destination. Common: internal→alpha→beta→production.
@@ -313,28 +310,26 @@ def promote_release(
             release_name=release_name or None,
             release_notes=notes,
         )
-        return json.dumps(
-            {
-                "success": True,
-                "message": (
-                    f"Version codes {version_codes} promoted from '{from_track}' "
-                    f"to '{to_track}' at {rollout_percentage}% rollout."
-                ),
-                "track": _format_track(result["track"]),
-                "editId": result.get("commit", {}).get("editId"),
-            },
-            indent=2,
-        )
+        return {
+            "success": True,
+            "message": (
+                f"Version codes {version_codes} promoted from '{from_track}' "
+                f"to '{to_track}' at {rollout_percentage}% rollout."
+            ),
+            "track": _format_track(result["track"]),
+            "editId": result.get("commit", {}).get("editId"),
+        }
     except Exception as exc:
-        return json.dumps({"success": False, "error": str(exc)}, indent=2)
+        return {"success": False, "error": str(exc)}
 
 
 # ---------------------------------------------------------------------------
 # Tool: publish_managed_release
 # ---------------------------------------------------------------------------
 
+
 @mcp.tool()
-def publish_managed_release(package_name: str) -> str:
+def publish_managed_release(package_name: str) -> dict:
     """Send approved changes live when Managed Publishing is enabled.
 
     Call after changes committed via create_release/update_release/promote_release
@@ -345,23 +340,21 @@ def publish_managed_release(package_name: str) -> str:
     """
     try:
         _publisher().publish_managed_release(package_name)
-        return json.dumps(
-            {
-                "success": True,
-                "message": "Changes sent live successfully via Managed Publishing.",
-            },
-            indent=2,
-        )
+        return {
+            "success": True,
+            "message": "Changes sent live successfully via Managed Publishing.",
+        }
     except Exception as exc:
-        return json.dumps({"success": False, "error": str(exc)}, indent=2)
+        return {"success": False, "error": str(exc)}
 
 
 # ---------------------------------------------------------------------------
 # Tool: list_artifacts
 # ---------------------------------------------------------------------------
 
+
 @mcp.tool()
-def list_artifacts(package_name: str) -> str:
+def list_artifacts(package_name: str) -> dict:
     """List all APKs and AABs uploaded to the app.
 
     Returns version codes and SHA hashes. Useful for finding version codes
@@ -394,21 +387,19 @@ def list_artifacts(package_name: str) -> str:
             key=lambda x: x.get("versionCode") or 0,
             reverse=True,
         )
-        return json.dumps(
-            {
-                "packageName": package_name,
-                "totalCount": len(all_artifacts),
-                "artifacts": all_artifacts,
-            },
-            indent=2,
-        )
+        return {
+            "packageName": package_name,
+            "totalCount": len(all_artifacts),
+            "artifacts": all_artifacts,
+        }
     except Exception as exc:
-        return json.dumps({"success": False, "error": str(exc)}, indent=2)
+        return {"success": False, "error": str(exc)}
 
 
 # ---------------------------------------------------------------------------
 # Tool: upload_artifact
 # ---------------------------------------------------------------------------
+
 
 @mcp.tool()
 def upload_artifact(
@@ -419,7 +410,7 @@ def upload_artifact(
     rollout_percentage: float = 10.0,
     release_name: str = "",
     release_notes: Optional[dict] = None,
-) -> str:
+) -> dict:
     """Upload an APK or AAB and create a release on the given track.
 
     File type auto-detected from extension (.apk/.aab). Upload and track
@@ -445,33 +436,31 @@ def upload_artifact(
             release_notes=notes,
             status=status,
         )
-        return json.dumps(
-            {
-                "success": True,
-                "message": (
-                    f"Uploaded {result['artifactType'].upper()} with version code "
-                    f"{result['versionCode']} to '{track}' track."
-                ),
-                "versionCode": result["versionCode"],
-                "artifactType": result["artifactType"],
-                "track": _format_track(result["track"]),
-                "editId": result.get("commit", {}).get("editId"),
-            },
-            indent=2,
-        )
+        return {
+            "success": True,
+            "message": (
+                f"Uploaded {result['artifactType'].upper()} with version code "
+                f"{result['versionCode']} to '{track}' track."
+            ),
+            "versionCode": result["versionCode"],
+            "artifactType": result["artifactType"],
+            "track": _format_track(result["track"]),
+            "editId": result.get("commit", {}).get("editId"),
+        }
     except Exception as exc:
-        return json.dumps({"success": False, "error": str(exc)}, indent=2)
+        return {"success": False, "error": str(exc)}
 
 
 # ---------------------------------------------------------------------------
 # Tool: upload_to_internal_sharing
 # ---------------------------------------------------------------------------
 
+
 @mcp.tool()
 def upload_to_internal_sharing(
     package_name: str,
     file_path: str,
-) -> str:
+) -> dict:
     """Upload APK or AAB to Internal App Sharing and get a shareable link.
 
     Shares a build via URL without assigning it to a track. Ideal for quick
@@ -486,32 +475,30 @@ def upload_to_internal_sharing(
             package_name=package_name,
             file_path=file_path,
         )
-        return json.dumps(
-            {
-                "success": True,
-                "downloadUrl": result.get("downloadUrl"),
-                "artifactType": result.get("artifactType"),
-                "certificateFingerprint": result.get("certificateFingerprint"),
-                "message": (
-                    "Share the downloadUrl with testers. They must have Internal "
-                    "App Sharing enabled in their Play Store settings."
-                ),
-            },
-            indent=2,
-        )
+        return {
+            "success": True,
+            "downloadUrl": result.get("downloadUrl"),
+            "artifactType": result.get("artifactType"),
+            "certificateFingerprint": result.get("certificateFingerprint"),
+            "message": (
+                "Share the downloadUrl with testers. They must have Internal "
+                "App Sharing enabled in their Play Store settings."
+            ),
+        }
     except Exception as exc:
-        return json.dumps({"success": False, "error": str(exc)}, indent=2)
+        return {"success": False, "error": str(exc)}
 
 
 # ---------------------------------------------------------------------------
 # Tool: get_testers
 # ---------------------------------------------------------------------------
 
+
 @mcp.tool()
 def get_testers(
     package_name: str,
     track: str = "internal",
-) -> str:
+) -> dict:
     """Get tester emails and Google Groups for an internal or alpha track.
 
     Args:
@@ -520,22 +507,20 @@ def get_testers(
     """
     try:
         data = _publisher().get_testers(package_name, track)
-        return json.dumps(
-            {
-                "packageName": package_name,
-                "track": track,
-                "testers": data.get("testers", []),
-                "googleGroups": data.get("googleGroups", []),
-            },
-            indent=2,
-        )
+        return {
+            "packageName": package_name,
+            "track": track,
+            "testers": data.get("testers", []),
+            "googleGroups": data.get("googleGroups", []),
+        }
     except Exception as exc:
-        return json.dumps({"success": False, "error": str(exc)}, indent=2)
+        return {"success": False, "error": str(exc)}
 
 
 # ---------------------------------------------------------------------------
 # Tool: update_testers
 # ---------------------------------------------------------------------------
+
 
 @mcp.tool()
 def update_testers(
@@ -543,7 +528,7 @@ def update_testers(
     track: str = "internal",
     emails: Optional[list[str]] = None,
     google_groups: Optional[list[str]] = None,
-) -> str:
+) -> dict:
     """Replace the tester list for an internal or alpha track.
 
     WARNING: Full replacement — omitted testers lose access.
@@ -563,31 +548,29 @@ def update_testers(
             google_groups=google_groups,
         )
         testers = result.get("testers", {})
-        return json.dumps(
-            {
-                "success": True,
-                "message": f"Tester list updated for '{track}' track.",
-                "track": track,
-                "testers": testers.get("testers", []),
-                "googleGroups": testers.get("googleGroups", []),
-                "editId": result.get("commit", {}).get("editId"),
-            },
-            indent=2,
-        )
+        return {
+            "success": True,
+            "message": f"Tester list updated for '{track}' track.",
+            "track": track,
+            "testers": testers.get("testers", []),
+            "googleGroups": testers.get("googleGroups", []),
+            "editId": result.get("commit", {}).get("editId"),
+        }
     except Exception as exc:
-        return json.dumps({"success": False, "error": str(exc)}, indent=2)
+        return {"success": False, "error": str(exc)}
 
 
 # ---------------------------------------------------------------------------
 # Tool: get_crash_rate
 # ---------------------------------------------------------------------------
 
+
 @mcp.tool()
 def get_crash_rate(
     package_name: str,
     days: int = 7,
     version_code: str = "",
-) -> str:
+) -> dict:
     """Fetch user-perceived crash rate from Android Vitals.
 
     Returns daily crashRate, userPerceivedCrashRate, and distinctUsers by
@@ -608,41 +591,36 @@ def get_crash_rate(
         )
         rows = _parse_reporting_rows(raw.get("rows", []))
         if not rows:
-            return json.dumps(
-                {
-                    "packageName": package_name,
-                    "message": (
-                        "No crash data available. Data may lag up to 2 days "
-                        "or the app has no crashes in this period."
-                    ),
-                    "rows": [],
-                },
-                indent=2,
-            )
-        return json.dumps(
-            {
+            return {
                 "packageName": package_name,
-                "periodDays": days,
-                "badBehaviorThreshold": {"userPerceivedCrashRate": 0.0109},
-                "totalRows": len(rows),
-                "rows": rows,
-            },
-            indent=2,
-        )
+                "message": (
+                    "No crash data available. Data may lag up to 2 days "
+                    "or the app has no crashes in this period."
+                ),
+                "rows": [],
+            }
+        return {
+            "packageName": package_name,
+            "periodDays": days,
+            "badBehaviorThreshold": {"userPerceivedCrashRate": 0.0109},
+            "totalRows": len(rows),
+            "rows": rows,
+        }
     except Exception as exc:
-        return json.dumps({"success": False, "error": str(exc)}, indent=2)
+        return {"success": False, "error": str(exc)}
 
 
 # ---------------------------------------------------------------------------
 # Tool: get_anr_rate
 # ---------------------------------------------------------------------------
 
+
 @mcp.tool()
 def get_anr_rate(
     package_name: str,
     days: int = 7,
     version_code: str = "",
-) -> str:
+) -> dict:
     """Fetch ANR (Application Not Responding) rate from Android Vitals.
 
     Returns daily anrRate, userPerceivedAnrRate, and distinctUsers by version
@@ -663,41 +641,36 @@ def get_anr_rate(
         )
         rows = _parse_reporting_rows(raw.get("rows", []))
         if not rows:
-            return json.dumps(
-                {
-                    "packageName": package_name,
-                    "message": (
-                        "No ANR data available. Data may lag up to 2 days "
-                        "or the app has no ANRs in this period."
-                    ),
-                    "rows": [],
-                },
-                indent=2,
-            )
-        return json.dumps(
-            {
+            return {
                 "packageName": package_name,
-                "periodDays": days,
-                "badBehaviorThreshold": {"userPerceivedAnrRate": 0.0047},
-                "totalRows": len(rows),
-                "rows": rows,
-            },
-            indent=2,
-        )
+                "message": (
+                    "No ANR data available. Data may lag up to 2 days "
+                    "or the app has no ANRs in this period."
+                ),
+                "rows": [],
+            }
+        return {
+            "packageName": package_name,
+            "periodDays": days,
+            "badBehaviorThreshold": {"userPerceivedAnrRate": 0.0047},
+            "totalRows": len(rows),
+            "rows": rows,
+        }
     except Exception as exc:
-        return json.dumps({"success": False, "error": str(exc)}, indent=2)
+        return {"success": False, "error": str(exc)}
 
 
 # ---------------------------------------------------------------------------
 # Tool: get_wakelock_rate
 # ---------------------------------------------------------------------------
 
+
 @mcp.tool()
 def get_wakelock_rate(
     package_name: str,
     days: int = 7,
     version_code: str = "",
-) -> str:
+) -> dict:
     """Fetch stuck background wake lock rate from Android Vitals.
 
     Returns daily stuckBackgroundWakelockRate and distinctUsers by version
@@ -717,40 +690,35 @@ def get_wakelock_rate(
         )
         rows = _parse_reporting_rows(raw.get("rows", []))
         if not rows:
-            return json.dumps(
-                {
-                    "packageName": package_name,
-                    "message": (
-                        "No stuck wakelock data available. Data may lag up to 2 days "
-                        "or the app has no wakelock violations in this period."
-                    ),
-                    "rows": [],
-                },
-                indent=2,
-            )
-        return json.dumps(
-            {
+            return {
                 "packageName": package_name,
-                "periodDays": days,
-                "totalRows": len(rows),
-                "rows": rows,
-            },
-            indent=2,
-        )
+                "message": (
+                    "No stuck wakelock data available. Data may lag up to 2 days "
+                    "or the app has no wakelock violations in this period."
+                ),
+                "rows": [],
+            }
+        return {
+            "packageName": package_name,
+            "periodDays": days,
+            "totalRows": len(rows),
+            "rows": rows,
+        }
     except Exception as exc:
-        return json.dumps({"success": False, "error": str(exc)}, indent=2)
+        return {"success": False, "error": str(exc)}
 
 
 # ---------------------------------------------------------------------------
 # Tool: get_wakeup_rate
 # ---------------------------------------------------------------------------
 
+
 @mcp.tool()
 def get_wakeup_rate(
     package_name: str,
     days: int = 7,
     version_code: str = "",
-) -> str:
+) -> dict:
     """Fetch excessive CPU wakeup rate from Android Vitals.
 
     Returns daily excessiveWakeupRate and distinctUsers by version code.
@@ -770,39 +738,34 @@ def get_wakeup_rate(
         )
         rows = _parse_reporting_rows(raw.get("rows", []))
         if not rows:
-            return json.dumps(
-                {
-                    "packageName": package_name,
-                    "message": (
-                        "No excessive wakeup data available. Data may lag up to 2 days "
-                        "or the app has no wakeup violations in this period."
-                    ),
-                    "rows": [],
-                },
-                indent=2,
-            )
-        return json.dumps(
-            {
+            return {
                 "packageName": package_name,
-                "periodDays": days,
-                "totalRows": len(rows),
-                "rows": rows,
-            },
-            indent=2,
-        )
+                "message": (
+                    "No excessive wakeup data available. Data may lag up to 2 days "
+                    "or the app has no wakeup violations in this period."
+                ),
+                "rows": [],
+            }
+        return {
+            "packageName": package_name,
+            "periodDays": days,
+            "totalRows": len(rows),
+            "rows": rows,
+        }
     except Exception as exc:
-        return json.dumps({"success": False, "error": str(exc)}, indent=2)
+        return {"success": False, "error": str(exc)}
 
 
 # ---------------------------------------------------------------------------
 # Tool: get_vitals_summary
 # ---------------------------------------------------------------------------
 
+
 @mcp.tool()
 def get_vitals_summary(
     package_name: str,
     days: int = 7,
-) -> str:
+) -> dict:
     """Get combined Android Vitals: crash rate and ANR rate per version code.
 
     Returns averages over the period with threshold flags.
@@ -825,7 +788,9 @@ def get_vitals_summary(
             by_version: dict = {}
             for row in rows:
                 vc = row.get("versionCode") or "unknown"
-                entry = by_version.setdefault(vc, {"values": [], "perceived": [], "users": []})
+                entry = by_version.setdefault(
+                    vc, {"values": [], "perceived": [], "users": []}
+                )
                 if isinstance(row.get(rate_key), (int, float)):
                     entry["values"].append(row[rate_key])
                 if isinstance(row.get(perceived_key), (int, float)):
@@ -859,32 +824,32 @@ def get_vitals_summary(
             # Flag if exceeding bad behavior thresholds
             crash_pct = entry.get("avg_userPerceivedCrashRate")
             anr_pct = entry.get("avg_userPerceivedAnrRate")
-            entry["exceedsCrashThreshold"] = crash_pct is not None and crash_pct > 0.0109
+            entry["exceedsCrashThreshold"] = (
+                crash_pct is not None and crash_pct > 0.0109
+            )
             entry["exceedsAnrThreshold"] = anr_pct is not None and anr_pct > 0.0047
             summary.append(entry)
 
         latest = summary[0] if summary else None
 
-        return json.dumps(
-            {
-                "packageName": package_name,
-                "periodDays": days,
-                "badBehaviorThresholds": {
-                    "userPerceivedCrashRate": 0.0109,
-                    "userPerceivedAnrRate": 0.0047,
-                },
-                "latestVersionSummary": latest,
-                "allVersions": summary,
+        return {
+            "packageName": package_name,
+            "periodDays": days,
+            "badBehaviorThresholds": {
+                "userPerceivedCrashRate": 0.0109,
+                "userPerceivedAnrRate": 0.0047,
             },
-            indent=2,
-        )
+            "latestVersionSummary": latest,
+            "allVersions": summary,
+        }
     except Exception as exc:
-        return json.dumps({"success": False, "error": str(exc)}, indent=2)
+        return {"success": False, "error": str(exc)}
 
 
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
+
 
 def main() -> None:
     import argparse
