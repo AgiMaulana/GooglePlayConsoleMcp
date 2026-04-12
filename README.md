@@ -405,7 +405,7 @@ Go to Play Console → **Setup → API access** and verify the service account i
 |---|---|
 | [PyPI](https://pypi.org/project/google-play-mcp/) | `pip install google-play-mcp` |
 | [Smithery](https://smithery.ai/server/@agimaulana/google-play-mcp) | search `google-play-mcp` |
-| [Official MCP Registry](https://registry.modelcontextprotocol.io/servers/io.github.AgiMaulana/google-play-mcp) | `io.github.AgiMaulana/google-play-mcp` |
+| [Official MCP Registry](https://registry.modelcontextprotocol.io/?search=google-play-mcp) | `google-play-mcp` |
 
 ---
 
