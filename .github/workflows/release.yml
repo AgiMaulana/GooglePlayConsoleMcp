@@ -1,0 +1,133 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - "release/*"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Version number (e.g., 0.5.7)"
+        required: true
+        type: string
+
+jobs:
+  prepare:
+    name: Prepare release
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.parse_version.outputs.version }}
+    steps:
+      - name: Parse version from branch name
+        if: github.event_name == 'push'
+        id: parse_version
+        run: |
+          VERSION="${GITHUB_REF#refs/heads/release/}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Extracted version: $VERSION"
+
+      - name: Use manually provided version
+        if: github.event_name == 'workflow_dispatch'
+        id: manual_version
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Manual version: $VERSION"
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Update server.json version
+        run: |
+          VERSION="${{ steps.parse_version.outputs.version }}"
+          echo "Updating to version: $VERSION"
+          python3 << EOF
+import json
+
+with open('server.json') as f:
+    data = json.load(f)
+
+data['version'] = VERSION
+for pkg in data.get('packages', []):
+    pkg['version'] = VERSION
+
+with open('server.json', 'w') as f:
+    json.dump(data, f, indent=2)
+EOF
+
+      - name: Display updated server.json
+        run: |
+          cat server.json
+
+      - name: Configure git
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+
+      - name: Commit version bump
+        run: |
+          git add server.json
+          git commit -m "release: v${{ steps.parse_version.outputs.version }}"
+
+      - name: Create and push tag
+        run: |
+          git tag "v${{ steps.parse_version.outputs.version }}"
+          git push origin "refs/tags/v${{ steps.parse_version.outputs.version }}:refs/tags/v${{ steps.parse_version.outputs.version }}"
+
+      - name: Create GitHub Release
+        run: |
+          gh release create "v${{ steps.parse_version.outputs.version }}" \
+            --title "v${{ steps.parse_version.outputs.version }}" \
+            --notes "Release v${{ steps.parse_version.outputs.version }}"
+
+  publish-pypi:
+    name: Publish to PyPI
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: "refs/tags/v${{ needs.prepare.outputs.version }}"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build tools
+        run: pip install build
+
+      - name: Build package
+        run: python -m build
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          user: __token__
+          password: ${{ secrets.PYPI_API_TOKEN }}
+
+  publish-mcp:
+    name: Publish to MCP Registry
+    needs: prepare
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: "refs/tags/v${{ needs.prepare.outputs.version }}"
+
+      - name: Install MCP Publisher
+        run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/download/v1.5.0/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz
+
+      - name: Publish to MCP Registry
+        run: |
+          ./mcp-publisher login github-oidc
+          ./mcp-publisher publish
