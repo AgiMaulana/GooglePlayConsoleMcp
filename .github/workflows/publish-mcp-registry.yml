@@ -21,7 +21,7 @@ jobs:
       - name: Update version & Publish
         run: |
           VERSION=${GITHUB_REF#refs/tags/v}
-          sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" server.json
+          python3 -c "import json; d=json.load(open('server.json')); d['version']='$VERSION'; json.dump(d,open('server.json','w'))" 
           ./mcp-publisher login github-oidc
           ./mcp-publisher publish
 
