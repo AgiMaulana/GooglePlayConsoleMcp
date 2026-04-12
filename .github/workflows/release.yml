@@ -4,12 +4,6 @@ on:
   push:
     branches:
       - "release/*"
-  workflow_dispatch:
-    inputs:
-      version:
-        description: "Version number (e.g., 0.5.7)"
-        required: true
-        type: string
 
 jobs:
   prepare:
@@ -19,45 +13,27 @@ jobs:
       version: ${{ steps.parse_version.outputs.version }}
     steps:
       - name: Parse version from branch name
-        if: github.event_name == 'push'
         id: parse_version
         run: |
           VERSION="${GITHUB_REF#refs/heads/release/}"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Extracted version: $VERSION"
-
-      - name: Use manually provided version
-        if: github.event_name == 'workflow_dispatch'
-        id: manual_version
-        run: |
-          VERSION="${{ github.event.inputs.version }}"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "Manual version: $VERSION"
 
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Update server.json version
-        run: |
-          VERSION="${{ steps.parse_version.outputs.version }}"
-          echo "Updating to version: $VERSION"
-          python3 << EOF
+        env:
+          VERSION: ${{ steps.parse_version.outputs.version }}
+        run: python3 -c "
 import json
-
 with open('server.json') as f:
     data = json.load(f)
-
-data['version'] = VERSION
+data['version'] = '$VERSION'
 for pkg in data.get('packages', []):
-    pkg['version'] = VERSION
-
+    pkg['version'] = '$VERSION'
 with open('server.json', 'w') as f:
     json.dump(data, f, indent=2)
-EOF
-
-      - name: Display updated server.json
-        run: |
-          cat server.json
+"
 
       - name: Configure git
         run: |
@@ -65,20 +41,28 @@ EOF
           git config --global user.name "github-actions[bot]"
 
       - name: Commit version bump
+        env:
+          VERSION: ${{ steps.parse_version.outputs.version }}
         run: |
           git add server.json
-          git commit -m "release: v${{ steps.parse_version.outputs.version }}"
+          git commit -m "release: v$VERSION"
+          git push origin release/$VERSION
 
-      - name: Create and push tag
+      - name: Create tag
+        env:
+          VERSION: ${{ steps.parse_version.outputs.version }}
         run: |
-          git tag "v${{ steps.parse_version.outputs.version }}"
-          git push origin "refs/tags/v${{ steps.parse_version.outputs.version }}:refs/tags/v${{ steps.parse_version.outputs.version }}"
+          git tag "v$VERSION"
+          git push origin "refs/tags/v$VERSION"
 
       - name: Create GitHub Release
+        env:
+          VERSION: ${{ steps.parse_version.outputs.version }}
         run: |
-          gh release create "v${{ steps.parse_version.outputs.version }}" \
-            --title "v${{ steps.parse_version.outputs.version }}" \
-            --notes "Release v${{ steps.parse_version.outputs.version }}"
+          gh release create "v$VERSION" \
+            --title "v$VERSION" \
+            --notes "Release v$VERSION" \
+            --target main
 
   publish-pypi:
     name: Publish to PyPI
@@ -107,9 +91,6 @@ EOF
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          user: __token__
-          password: ${{ secrets.PYPI_API_TOKEN }}
 
   publish-mcp:
     name: Publish to MCP Registry
