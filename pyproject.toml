@@ -30,5 +30,8 @@ google-play-mcp = "google_play_mcp.server:main"
 [tool.hatch.build.targets.wheel]
 packages = ["src/google_play_mcp"]
 
+[tool.hatch.version]
+version_variable = "google_play_mcp/__init__.py:__version__"
+
 [tool.hatch-vcs]
 versioning = "calver"
