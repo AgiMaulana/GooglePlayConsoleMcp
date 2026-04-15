@@ -187,6 +187,10 @@ class PublisherClient:
 
         Targets the first matching release (by version_codes if provided,
         otherwise the first inProgress/halted/draft/completed release).
+
+        When updating a release to completed/100%, filters out any other
+        completed releases from the PUT body to avoid the API error:
+        "Only one completed release is allowed."
         """
         if rollout_percentage is not None and not (0 < rollout_percentage <= 100):
             raise ValueError("rollout_percentage must be > 0 and <= 100.")
@@ -197,11 +201,16 @@ class PublisherClient:
             releases: List[Dict[str, Any]] = track_data.get("releases", [])
             target_vcs = {str(vc) for vc in version_codes} if version_codes else None
 
+            # Determine the target release's version codes for filtering
+            target_release_vcs: Optional[set] = None
             updated = False
             for release in releases:
                 if target_vcs:
                     if not set(release.get("versionCodes", [])).intersection(target_vcs):
                         continue
+                # This is the release we're updating
+                target_release_vcs = set(release.get("versionCodes", []))
+                
                 if status:
                     release["status"] = status
                 if rollout_percentage is not None:
@@ -220,8 +229,15 @@ class PublisherClient:
                     f"No matching release found in the '{track}' track."
                 )
 
+            # Filter out completed releases that are not the target release
+            # to avoid "Only one completed release is allowed" error
+            releases_for_put = [
+                r for r in releases
+                if r.get("status") != "completed" or set(r.get("versionCodes", [])) == target_release_vcs
+            ]
+
             updated_track = self._update_track(
-                package_name, edit_id, track, {"track": track, "releases": releases}
+                package_name, edit_id, track, {"track": track, "releases": releases_for_put}
             )
             commit = self._commit_edit(package_name, edit_id)
             return {"track": updated_track, "commit": commit}
