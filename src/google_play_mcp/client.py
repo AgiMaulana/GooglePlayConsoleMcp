@@ -203,6 +203,7 @@ class PublisherClient:
 
             # Determine the target release's version codes for filtering
             target_release_vcs: Optional[set] = None
+            target_was_completed = False
             updated = False
             for release in releases:
                 if target_vcs:
@@ -210,6 +211,9 @@ class PublisherClient:
                         continue
                 # This is the release we're updating
                 target_release_vcs = set(release.get("versionCodes", []))
+                
+                # Track if target is currently completed (before modification)
+                target_was_completed = release.get("status") == "completed"
                 
                 if status:
                     release["status"] = status
@@ -230,11 +234,25 @@ class PublisherClient:
                 )
 
             # Filter out completed releases that are not the target release
-            # to avoid "Only one completed release is allowed" error
-            releases_for_put = [
-                r for r in releases
-                if r.get("status") != "completed" or set(r.get("versionCodes", [])) == target_release_vcs
-            ]
+            # when there will be multiple completed releases after the update.
+            # This avoids the API error: "Only one completed release is allowed."
+            target_is_becoming_completed = (
+                status == "completed" or
+                (rollout_percentage is not None and rollout_percentage >= 100)
+            )
+            # Filter if: (1) target is becoming completed, or
+            # (2) target was completed and is being changed to non-completed
+            should_filter = (
+                target_is_becoming_completed or
+                (target_was_completed and status and status != "completed")
+            )
+            if should_filter:
+                releases_for_put = [
+                    r for r in releases
+                    if r.get("status") != "completed" or set(r.get("versionCodes", [])) == target_release_vcs
+                ]
+            else:
+                releases_for_put = releases
 
             updated_track = self._update_track(
                 package_name, edit_id, track, {"track": track, "releases": releases_for_put}
