@@ -106,7 +106,6 @@ def _parse_reporting_rows(rows: list) -> list:
 # ---------------------------------------------------------------------------
 
 
-@mcp.tool()
 def list_tracks(package_name: str) -> dict:
     """List all release tracks with their current releases.
 
@@ -129,7 +128,6 @@ def list_tracks(package_name: str) -> dict:
 # ---------------------------------------------------------------------------
 
 
-@mcp.tool()
 def get_track_info(
     package_name: str,
     track: str = "production",
@@ -176,7 +174,6 @@ def get_track_info(
 # ---------------------------------------------------------------------------
 
 
-@mcp.tool()
 def create_release(
     package_name: str,
     track: str,
@@ -229,7 +226,6 @@ def create_release(
 # ---------------------------------------------------------------------------
 
 
-@mcp.tool()
 def update_release(
     package_name: str,
     track: str = "production",
@@ -275,7 +271,6 @@ def update_release(
 # ---------------------------------------------------------------------------
 
 
-@mcp.tool()
 def promote_release(
     package_name: str,
     from_track: str,
@@ -328,7 +323,6 @@ def promote_release(
 # ---------------------------------------------------------------------------
 
 
-@mcp.tool()
 def publish_managed_release(package_name: str) -> dict:
     """Send approved changes live when Managed Publishing is enabled.
 
@@ -353,7 +347,6 @@ def publish_managed_release(package_name: str) -> dict:
 # ---------------------------------------------------------------------------
 
 
-@mcp.tool()
 def list_artifacts(package_name: str) -> dict:
     """List all APKs and AABs uploaded to the app.
 
@@ -401,7 +394,6 @@ def list_artifacts(package_name: str) -> dict:
 # ---------------------------------------------------------------------------
 
 
-@mcp.tool()
 def upload_artifact(
     package_name: str,
     file_path: str,
@@ -456,7 +448,6 @@ def upload_artifact(
 # ---------------------------------------------------------------------------
 
 
-@mcp.tool()
 def upload_to_internal_sharing(
     package_name: str,
     file_path: str,
@@ -494,7 +485,6 @@ def upload_to_internal_sharing(
 # ---------------------------------------------------------------------------
 
 
-@mcp.tool()
 def get_testers(
     package_name: str,
     track: str = "internal",
@@ -522,7 +512,6 @@ def get_testers(
 # ---------------------------------------------------------------------------
 
 
-@mcp.tool()
 def update_testers(
     package_name: str,
     track: str = "internal",
@@ -565,7 +554,6 @@ def update_testers(
 # ---------------------------------------------------------------------------
 
 
-@mcp.tool()
 def get_crash_rate(
     package_name: str,
     days: int = 7,
@@ -615,7 +603,6 @@ def get_crash_rate(
 # ---------------------------------------------------------------------------
 
 
-@mcp.tool()
 def get_anr_rate(
     package_name: str,
     days: int = 7,
@@ -665,7 +652,6 @@ def get_anr_rate(
 # ---------------------------------------------------------------------------
 
 
-@mcp.tool()
 def get_wakelock_rate(
     package_name: str,
     days: int = 7,
@@ -713,7 +699,6 @@ def get_wakelock_rate(
 # ---------------------------------------------------------------------------
 
 
-@mcp.tool()
 def get_wakeup_rate(
     package_name: str,
     days: int = 7,
@@ -761,7 +746,6 @@ def get_wakeup_rate(
 # ---------------------------------------------------------------------------
 
 
-@mcp.tool()
 def get_vitals_summary(
     package_name: str,
     days: int = 7,
@@ -849,6 +833,26 @@ def get_vitals_summary(
 # ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
+
+for _tool in (
+    list_tracks,
+    get_track_info,
+    create_release,
+    update_release,
+    promote_release,
+    publish_managed_release,
+    list_artifacts,
+    upload_artifact,
+    upload_to_internal_sharing,
+    get_testers,
+    update_testers,
+    get_crash_rate,
+    get_anr_rate,
+    get_wakelock_rate,
+    get_wakeup_rate,
+    get_vitals_summary,
+):
+    mcp.tool()(_tool)
 
 
 def main() -> None:

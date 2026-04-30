@@ -27,3 +27,6 @@ env/
 .idea/
 .vscode/
 *.swp
+
+# Local editor backups
+.qwen/settings.json.orig

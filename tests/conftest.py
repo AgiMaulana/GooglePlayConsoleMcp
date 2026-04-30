@@ -1,6 +1,13 @@
 """Pytest fixtures for Google Play MCP server tests."""
 
+from pathlib import Path
+import sys
 from unittest.mock import MagicMock, patch
+
+ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
 
 import pytest
 

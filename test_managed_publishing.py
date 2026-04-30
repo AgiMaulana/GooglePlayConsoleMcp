@@ -1,6 +1,5 @@
-"""Quick smoke test for publish_managed_release — uses mocks, no real API calls."""
+"""Quick smoke test for publish_managed_release -- uses mocks, no real API calls."""
 
-import json
 import sys
 from unittest.mock import MagicMock, patch
 
@@ -27,7 +26,7 @@ def test_client_calls_managed_publishing_publish():
 
 
 # ---------------------------------------------------------------------------
-# Test 2: server tool returns success JSON on happy path
+# Test 2: server tool returns success dict on happy path
 # ---------------------------------------------------------------------------
 
 def test_server_tool_returns_success():
@@ -49,16 +48,16 @@ def test_server_tool_returns_success():
             mock_pub.return_value = mock_client
 
             from google_play_mcp.server import publish_managed_release
-            result = json.loads(publish_managed_release("com.example.app"))
+            result = publish_managed_release("com.example.app")
 
     assert result["success"] is True
     assert "live" in result["message"].lower()
     mock_client.publish_managed_release.assert_called_once_with("com.example.app")
-    print("PASS: server tool returns success JSON and delegates to client")
+    print("PASS: server tool returns success dict and delegates to client")
 
 
 # ---------------------------------------------------------------------------
-# Test 3: server tool returns error JSON on API failure
+# Test 3: server tool returns error dict on API failure
 # ---------------------------------------------------------------------------
 
 def test_server_tool_returns_error_on_failure():
@@ -68,11 +67,11 @@ def test_server_tool_returns_error_on_failure():
         mock_pub.return_value = mock_client
 
         from google_play_mcp.server import publish_managed_release
-        result = json.loads(publish_managed_release("com.example.app"))
+        result = publish_managed_release("com.example.app")
 
     assert result["success"] is False
     assert "403" in result["error"]
-    print("PASS: server tool returns error JSON on API exception")
+    print("PASS: server tool returns error dict on API exception")
 
 
 # ---------------------------------------------------------------------------
