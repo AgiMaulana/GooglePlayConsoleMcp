@@ -132,6 +132,56 @@ class TestUpdateRelease:
         assert result["success"] is True
 
 
+class TestUpdateReleaseFiltersCompletedReleases:
+    """Test for GitHub issue #6: update_release should filter out completed releases."""
+
+    def test_update_to_100_percent_filters_other_completed_releases(self, publisher_mock):
+        """When completing a staged rollout, other completed releases are excluded from PUT body."""
+        from google_play_mcp.client import PublisherClient
+        from unittest.mock import MagicMock
+
+        # Create a real PublisherClient but mock the internal methods
+        with patch.object(PublisherClient, '_create_edit') as mock_create, \
+             patch.object(PublisherClient, '_get_track') as mock_get, \
+             patch.object(PublisherClient, '_update_track') as mock_update, \
+             patch.object(PublisherClient, '_commit_edit') as mock_commit, \
+             patch.object(PublisherClient, '_delete_edit'):
+            
+            mock_create.return_value = "edit123"
+            mock_get.return_value = {
+                "track": "production",
+                "releases": [
+                    {"name": "5.58.5", "versionCodes": ["50107"], "status": "inProgress", "userFraction": 0.5},
+                    {"name": "5.57.2", "versionCodes": ["50106"], "status": "completed", "userFraction": 1.0},
+                ],
+            }
+            mock_update.return_value = {"track": "production", "releases": []}
+            mock_commit.return_value = {"editId": "edit123"}
+            
+            # Create client with mocked credentials
+            with patch("google_play_mcp.client._get_credentials"):
+                client = PublisherClient()
+                
+                # Update the inProgress release to 100%
+                result = client.update_release(
+                    package_name="com.example.app",
+                    track="production",
+                    rollout_percentage=100,
+                    version_codes=[50107],
+                )
+                
+                # Verify _update_track was called with filtered releases
+                mock_update.assert_called_once()
+                call_args = mock_update.call_args
+                body = call_args[0][3]  # The body parameter
+                
+                # Should only have 1 release (the target), not both
+                assert len(body["releases"]) == 1, \
+                    f"Expected 1 release in PUT body, got {len(body['releases'])}"
+                assert body["releases"][0]["versionCodes"] == ["50107"]
+                assert body["releases"][0]["status"] == "completed"
+
+
 class TestPromoteRelease:
     def test_returns_dict(self, publisher_mock):
         from google_play_mcp.server import promote_release
