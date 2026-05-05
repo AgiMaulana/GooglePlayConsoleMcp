@@ -45,16 +45,20 @@ jobs:
         env:
           VERSION: ${{ steps.parse_version.outputs.version }}
         run: |
-          git add server.json
-          git commit -m "release: v$VERSION"
-          git push origin release/$VERSION
+          if git diff --quiet; then
+            echo "No changes to commit"
+          else
+            git add server.json
+            git commit -m "release: v$VERSION"
+            git push origin release/$VERSION
+          fi
 
       - name: Create tag
         env:
           VERSION: ${{ steps.parse_version.outputs.version }}
         run: |
-          git tag "v$VERSION"
-          git push origin "refs/tags/v$VERSION"
+          git tag "v$VERSION" || true
+          git push origin "refs/tags/v$VERSION" || true
 
       - name: Create GitHub Release
         env:
@@ -63,7 +67,7 @@ jobs:
           gh release create "v$VERSION" \
             --title "v$VERSION" \
             --notes "Release v$VERSION" \
-            --target main
+            --target main || true
 
   publish-pypi:
     name: Publish to PyPI
