@@ -2,28 +2,33 @@ name: Release
 
 on:
   push:
-    branches:
-      - "release/*"
+    tags:
+      - "v*"
 
 jobs:
-  prepare:
-    name: Prepare release
+  release:
     runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.parse_version.outputs.version }}
     steps:
-      - name: Parse version from branch name
-        id: parse_version
-        run: |
-          VERSION="${GITHUB_REF#refs/heads/release/}"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Parse version from tag
+        id: version
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update pyproject.toml version
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          sed -i "s/version = \".*\"/version = \"$VERSION\"/" pyproject.toml
 
       - name: Update server.json version
         env:
-          VERSION: ${{ steps.parse_version.outputs.version }}
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           python3 -c "
           import json
@@ -36,84 +41,36 @@ jobs:
               json.dump(data, f, indent=2)
           "
 
-      - name: Configure git
+      - name: Commit version bump
         run: |
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
-
-      - name: Commit version bump
-        env:
-          VERSION: ${{ steps.parse_version.outputs.version }}
-        run: |
-          if git diff --quiet; then
-            echo "No changes to commit"
-          else
-            git add server.json
-            git commit -m "release: v$VERSION"
-            git push origin release/$VERSION
-          fi
-
-      - name: Create tag
-        env:
-          VERSION: ${{ steps.parse_version.outputs.version }}
-        run: |
-          git tag "v$VERSION" || true
-          git push origin "refs/tags/v$VERSION" || true
+          git add pyproject.toml server.json
+          git commit -m "release: v${{ steps.version.outputs.version }}"
+          git push origin HEAD:main
 
       - name: Create GitHub Release
-        env:
-          VERSION: ${{ steps.parse_version.outputs.version }}
         run: |
-          gh release create "v$VERSION" \
-            --title "v$VERSION" \
-            --notes "Release v$VERSION" \
-            --target main || true
+          gh release create "${{ github.ref_name }}" \
+            --title "${{ github.ref_name }}" \
+            --notes "Release ${{ steps.version.outputs.version }}" \
+            --target main
 
-  publish-pypi:
-    name: Publish to PyPI
-    needs: prepare
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: "refs/tags/v${{ needs.prepare.outputs.version }}"
-
-      - uses: actions/setup-python@v5
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
-      - name: Install build tools
-        run: pip install build
-
       - name: Build package
-        run: python -m build
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: dist/
+        run: |
+          pip install build
+          python -m build
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
 
-  publish-mcp:
-    name: Publish to MCP Registry
-    needs: prepare
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: "refs/tags/v${{ needs.prepare.outputs.version }}"
-
-      - name: Install MCP Publisher
-        run: |
-          curl -L "https://github.com/modelcontextprotocol/registry/releases/download/v1.5.0/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz
-
       - name: Publish to MCP Registry
         run: |
+          curl -L "https://github.com/modelcontextprotocol/registry/releases/download/v1.5.0/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz
           ./mcp-publisher login github-oidc
           ./mcp-publisher publish
