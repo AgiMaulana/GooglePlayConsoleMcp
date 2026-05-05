@@ -24,16 +24,17 @@ jobs:
       - name: Update server.json version
         env:
           VERSION: ${{ steps.parse_version.outputs.version }}
-        run: python3 -c "
-import json
-with open('server.json') as f:
-    data = json.load(f)
-data['version'] = '$VERSION'
-for pkg in data.get('packages', []):
-    pkg['version'] = '$VERSION'
-with open('server.json', 'w') as f:
-    json.dump(data, f, indent=2)
-"
+        run: |
+          python3 -c "
+          import json
+          with open('server.json') as f:
+              data = json.load(f)
+          data['version'] = '$VERSION'
+          for pkg in data.get('packages', []):
+              pkg['version'] = '$VERSION'
+          with open('server.json', 'w') as f:
+              json.dump(data, f, indent=2)
+          "
 
       - name: Configure git
         run: |
