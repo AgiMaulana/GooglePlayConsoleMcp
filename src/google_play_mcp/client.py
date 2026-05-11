@@ -47,9 +47,16 @@ class PublisherClient:
             packageName=package_name, body={}
         ).execute()["id"]
 
-    def _commit_edit(self, package_name: str, edit_id: str) -> Dict[str, Any]:
+    def _commit_edit(
+        self,
+        package_name: str,
+        edit_id: str,
+        submit_for_review: bool = True,
+    ) -> Dict[str, Any]:
         return self.service.edits().commit(
-            packageName=package_name, editId=edit_id
+            packageName=package_name,
+            editId=edit_id,
+            changesNotSentForReview=not submit_for_review,
         ).execute()
 
     def _delete_edit(self, package_name: str, edit_id: str) -> None:
@@ -136,12 +143,15 @@ class PublisherClient:
         release_notes: Optional[List[Dict[str, str]]] = None,
         status: str = "draft",
         country_codes: Optional[List[str]] = None,
+        submit_for_review: bool = True,
     ) -> Dict[str, Any]:
         """Create or replace a release on the given track.
 
         status: "draft" | "inProgress" | "halted" | "completed"
         rollout_percentage: used when status is "inProgress" (default 10%).
         country_codes: if provided, restricts the release to those countries.
+        submit_for_review: if True, submits changes for Google Play review.
+            Set to False to keep as draft (changesNotSentForReview=True).
         """
         release: Dict[str, Any] = {
             "versionCodes": [str(vc) for vc in version_codes],
@@ -169,7 +179,7 @@ class PublisherClient:
                     track=track,
                     body={"countries": [{"countryCode": cc} for cc in country_codes]},
                 ).execute()
-            commit = self._commit_edit(package_name, edit_id)
+            commit = self._commit_edit(package_name, edit_id, submit_for_review)
             return {"track": updated_track, "commit": commit}
         except Exception:
             self._delete_edit(package_name, edit_id)
@@ -182,6 +192,7 @@ class PublisherClient:
         rollout_percentage: Optional[float] = None,
         version_codes: Optional[List[int]] = None,
         status: Optional[str] = None,
+        submit_for_review: bool = True,
     ) -> Dict[str, Any]:
         """Update an existing release's rollout percentage and/or status.
 
@@ -191,6 +202,9 @@ class PublisherClient:
         When updating a release to completed/100%, filters out any other
         completed releases from the PUT body to avoid the API error:
         "Only one completed release is allowed."
+
+        submit_for_review: if True, submits changes for Google Play review.
+            Set to False to keep as draft (changesNotSentForReview=True).
         """
         if rollout_percentage is not None and not (0 < rollout_percentage <= 100):
             raise ValueError("rollout_percentage must be > 0 and <= 100.")
@@ -294,7 +308,7 @@ class PublisherClient:
             updated_track = self._update_track(
                 package_name, edit_id, track, {"track": track, "releases": releases_for_put}
             )
-            commit = self._commit_edit(package_name, edit_id)
+            commit = self._commit_edit(package_name, edit_id, submit_for_review)
             return {"track": updated_track, "commit": commit}
         except Exception:
             self._delete_edit(package_name, edit_id)
@@ -309,11 +323,15 @@ class PublisherClient:
         rollout_percentage: float = 10.0,
         release_name: Optional[str] = None,
         release_notes: Optional[List[Dict[str, str]]] = None,
+        submit_for_review: bool = True,
     ) -> Dict[str, Any]:
         """Copy a release from one track to another.
 
         Release notes and name are inherited from the source release unless
         overridden. rollout_percentage applies when to_track is production.
+
+        submit_for_review: if True, submits changes for Google Play review.
+            Set to False to keep as draft (changesNotSentForReview=True).
         """
         if not (0 < rollout_percentage <= 100):
             raise ValueError("rollout_percentage must be > 0 and <= 100.")
@@ -349,11 +367,118 @@ class PublisherClient:
                 package_name, edit_id, to_track,
                 {"track": to_track, "releases": [release]}
             )
-            commit = self._commit_edit(package_name, edit_id)
+            commit = self._commit_edit(package_name, edit_id, submit_for_review)
             return {"track": updated_track, "commit": commit}
         except Exception:
             self._delete_edit(package_name, edit_id)
             raise
+
+    def commit_draft_release(
+        self,
+        package_name: str,
+        track: str,
+        version_codes: List[int],
+        rollout_percentage: float = 10.0,
+        release_name: Optional[str] = None,
+        release_notes: Optional[List[Dict[str, str]]] = None,
+        status: str = "draft",
+        country_codes: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
+        """Commit changes without submitting for Google Play review.
+
+        Equivalent to create_release with submit_for_review=False.
+        Use this when you want to prepare changes but defer review submission.
+        """
+        return self.create_release(
+            package_name=package_name,
+            track=track,
+            version_codes=version_codes,
+            rollout_percentage=rollout_percentage,
+            release_name=release_name,
+            release_notes=release_notes,
+            status=status,
+            country_codes=country_codes,
+            submit_for_review=False,
+        )
+
+    def submit_release_for_review(
+        self,
+        package_name: str,
+        track: str,
+        version_codes: List[int],
+        rollout_percentage: float = 10.0,
+        release_name: Optional[str] = None,
+        release_notes: Optional[List[Dict[str, str]]] = None,
+        status: str = "draft",
+        country_codes: Optional[List[str]] = None,
+    ) -> Dict[str, Any]:
+        """Commit changes and submit immediately for Google Play review.
+
+        Equivalent to create_release with submit_for_review=True.
+        Use this when you want to submit changes for review in one step.
+        """
+        return self.create_release(
+            package_name=package_name,
+            track=track,
+            version_codes=version_codes,
+            rollout_percentage=rollout_percentage,
+            release_name=release_name,
+            release_notes=release_notes,
+            status=status,
+            country_codes=country_codes,
+            submit_for_review=True,
+        )
+
+    def promote_draft_release(
+        self,
+        package_name: str,
+        from_track: str,
+        to_track: str,
+        version_codes: List[int],
+        rollout_percentage: float = 10.0,
+        release_name: Optional[str] = None,
+        release_notes: Optional[List[Dict[str, str]]] = None,
+    ) -> Dict[str, Any]:
+        """Promote a release without submitting for Google Play review.
+
+        Equivalent to promote_release with submit_for_review=False.
+        Use this when you want to promote changes but defer review submission.
+        """
+        return self.promote_release(
+            package_name=package_name,
+            from_track=from_track,
+            to_track=to_track,
+            version_codes=version_codes,
+            rollout_percentage=rollout_percentage,
+            release_name=release_name,
+            release_notes=release_notes,
+            submit_for_review=False,
+        )
+
+    def promote_for_review(
+        self,
+        package_name: str,
+        from_track: str,
+        to_track: str,
+        version_codes: List[int],
+        rollout_percentage: float = 10.0,
+        release_name: Optional[str] = None,
+        release_notes: Optional[List[Dict[str, str]]] = None,
+    ) -> Dict[str, Any]:
+        """Promote a release and submit immediately for Google Play review.
+
+        Equivalent to promote_release with submit_for_review=True.
+        """
+        return self.promote_release(
+            package_name=package_name,
+            from_track=from_track,
+            to_track=to_track,
+            version_codes=version_codes,
+            rollout_percentage=rollout_percentage,
+            release_name=release_name,
+            release_notes=release_notes,
+            submit_for_review=True,
+        )
 
     # -----------------------------------------------------------------------
     # Public: Artifact Management
@@ -382,11 +507,15 @@ class PublisherClient:
         release_name: Optional[str] = None,
         release_notes: Optional[List[Dict[str, str]]] = None,
         status: str = "draft",
+        submit_for_review: bool = True,
     ) -> Dict[str, Any]:
         """Upload an APK or AAB and create a release on the given track.
 
         File type is inferred from the extension (.apk or .aab).
         Everything (upload + track assignment) happens in a single edit.
+
+        submit_for_review: if True, submits changes for Google Play review.
+            Set to False to keep as draft (changesNotSentForReview=True).
         """
         ext = os.path.splitext(file_path)[1].lower()
         if ext == ".apk":
@@ -428,7 +557,7 @@ class PublisherClient:
             updated_track = self._update_track(
                 package_name, edit_id, track, {"track": track, "releases": [release]}
             )
-            commit = self._commit_edit(package_name, edit_id)
+            commit = self._commit_edit(package_name, edit_id, submit_for_review)
             return {
                 "versionCode": version_code,
                 "artifactType": artifact_type,
@@ -509,11 +638,15 @@ class PublisherClient:
         track: str,
         emails: Optional[List[str]] = None,
         google_groups: Optional[List[str]] = None,
+        submit_for_review: bool = True,
     ) -> Dict[str, Any]:
         """Replace the tester list for an internal/closed testing track.
 
         This is a full replacement — existing testers not in the new list
         will lose access.
+
+        submit_for_review: if True, submits changes for Google Play review.
+            Set to False to keep as draft (changesNotSentForReview=True).
         """
         body: Dict[str, Any] = {}
         if emails is not None:
@@ -526,7 +659,7 @@ class PublisherClient:
             result = self.service.edits().testers().update(
                 packageName=package_name, editId=edit_id, track=track, body=body
             ).execute()
-            commit = self._commit_edit(package_name, edit_id)
+            commit = self._commit_edit(package_name, edit_id, submit_for_review)
             return {"testers": result, "commit": commit}
         except Exception:
             self._delete_edit(package_name, edit_id)
