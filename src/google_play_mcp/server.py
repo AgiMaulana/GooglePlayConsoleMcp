@@ -183,6 +183,7 @@ def create_release(
     release_name: str = "",
     release_notes: Optional[dict] = None,
     country_codes: Optional[list[str]] = None,
+    submit_for_review: bool = True,
 ) -> dict:
     """Create or replace a release on a track.
 
@@ -198,6 +199,8 @@ def create_release(
         release_name: Optional human-readable name.
         release_notes: Optional {lang: text} dict, e.g. {"en-US": "Bug fixes"}.
         country_codes: Optional ISO 3166-1 alpha-2 codes. Empty list removes restrictions.
+        submit_for_review: If True, submits changes for Google Play review.
+            Set to False to keep as draft without submitting for review.
     """
     try:
         notes = _notes_from_dict(release_notes)
@@ -210,6 +213,7 @@ def create_release(
             release_notes=notes,
             status=status,
             country_codes=country_codes,
+            submit_for_review=submit_for_review,
         )
         return {
             "success": True,
@@ -232,6 +236,7 @@ def update_release(
     rollout_percentage: Optional[float] = None,
     status: Optional[str] = None,
     version_codes: Optional[list[int]] = None,
+    submit_for_review: bool = True,
 ) -> dict:
     """Update rollout percentage and/or status of an existing release.
 
@@ -247,6 +252,8 @@ def update_release(
         rollout_percentage: New rollout % (0–100). Pass 100 to complete.
         status: "inProgress", "halted", "completed", or "draft".
         version_codes: Filter to release containing these codes. Default: first release found.
+        submit_for_review: If True, submits changes for Google Play review.
+            Set to False to keep as draft without submitting for review.
     """
     try:
         result = _publisher().update_release(
@@ -255,6 +262,7 @@ def update_release(
             rollout_percentage=rollout_percentage,
             version_codes=version_codes,
             status=status,
+            submit_for_review=submit_for_review,
         )
         return {
             "success": True,
@@ -279,6 +287,7 @@ def promote_release(
     rollout_percentage: float = 10.0,
     release_name: str = "",
     release_notes: Optional[dict] = None,
+    submit_for_review: bool = True,
 ) -> dict:
     """Promote a release from one track to another.
 
@@ -293,6 +302,8 @@ def promote_release(
         rollout_percentage: Rollout % at destination. Default 10%. Use 100 for full release.
         release_name: Optional name override.
         release_notes: Optional {lang: text} override, e.g. {"en-US": "New features"}.
+        submit_for_review: If True, submits changes for Google Play review.
+            Set to False to keep as draft without submitting for review.
     """
     try:
         notes = _notes_from_dict(release_notes)
@@ -304,6 +315,7 @@ def promote_release(
             rollout_percentage=rollout_percentage,
             release_name=release_name or None,
             release_notes=notes,
+            submit_for_review=submit_for_review,
         )
         return {
             "success": True,
@@ -402,6 +414,7 @@ def upload_artifact(
     rollout_percentage: float = 10.0,
     release_name: str = "",
     release_notes: Optional[dict] = None,
+    submit_for_review: bool = True,
 ) -> dict:
     """Upload an APK or AAB and create a release on the given track.
 
@@ -416,6 +429,8 @@ def upload_artifact(
         rollout_percentage: Rollout % when status is "inProgress". Default 10%.
         release_name: Optional human-readable name.
         release_notes: Optional {lang: text} dict, e.g. {"en-US": "Initial release"}.
+        submit_for_review: If True, submits changes for Google Play review.
+            Set to False to keep as draft without submitting for review.
     """
     try:
         notes = _notes_from_dict(release_notes)
@@ -427,6 +442,7 @@ def upload_artifact(
             release_name=release_name or None,
             release_notes=notes,
             status=status,
+            submit_for_review=submit_for_review,
         )
         return {
             "success": True,
@@ -517,6 +533,7 @@ def update_testers(
     track: str = "internal",
     emails: Optional[list[str]] = None,
     google_groups: Optional[list[str]] = None,
+    submit_for_review: bool = True,
 ) -> dict:
     """Replace the tester list for an internal or alpha track.
 
@@ -528,6 +545,8 @@ def update_testers(
         track: "internal" (default) or "alpha".
         emails: Tester email addresses. Empty list removes all individuals.
         google_groups: Google Group addresses. Empty list removes all groups.
+        submit_for_review: If True, submits changes for Google Play review.
+            Set to False to keep as draft without submitting for review.
     """
     try:
         result = _publisher().update_testers(
@@ -535,6 +554,7 @@ def update_testers(
             track=track,
             emails=emails,
             google_groups=google_groups,
+            submit_for_review=submit_for_review,
         )
         testers = result.get("testers", {})
         return {
