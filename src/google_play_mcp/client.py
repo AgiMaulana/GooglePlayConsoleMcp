@@ -222,6 +222,12 @@ class PublisherClient:
             target_release_vcs: Optional[set] = None
             target_was_completed = False
 
+            # When completing a rollout without version_codes, prefer inProgress release
+            # to avoid targeting an already-completed release
+            completing_without_vcs = (
+                rollout_percentage is not None and rollout_percentage >= 100 and not version_codes
+            )
+
             for release in releases:
                 # Normalize version codes to strings for comparison
                 release_vcs = {str(vc) for vc in release.get("versionCodes", [])}
@@ -229,6 +235,11 @@ class PublisherClient:
                 if target_vcs:
                     if not release_vcs.intersection(target_vcs):
                         continue
+
+                # Skip completed releases when completing rollout without version_codes
+                # This ensures we target inProgress releases instead
+                if completing_without_vcs and release.get("status") == "completed":
+                    continue
 
                 # Found target release - clone it to avoid mutating original
                 target_release = dict(release)
