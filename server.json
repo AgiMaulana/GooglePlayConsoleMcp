@@ -3,7 +3,7 @@
   "name": "io.github.AgiMaulana/google-play-mcp",
   "title": "Google Play Console MCP",
   "description": "Google Play release lifecycle: tracks, testers, rollout, and Android Vitals.",
-  "version": "0.5.7",
+  "version": "0.5.9",
   "repository": {
     "url": "https://github.com/AgiMaulana/GooglePlayConsoleMcp",
     "source": "github"
@@ -13,10 +13,15 @@
     {
       "registryType": "pypi",
       "identifier": "google-play-mcp",
-      "version": "0.5.7",
-      "transport": { "type": "stdio" },
+      "version": "0.5.9",
+      "transport": {
+        "type": "stdio"
+      },
       "runtimeArguments": [
-        { "type": "positional", "value": "google-play-mcp" }
+        {
+          "type": "positional",
+          "value": "google-play-mcp"
+        }
       ],
       "environmentVariables": [
         {
