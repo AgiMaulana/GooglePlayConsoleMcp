@@ -78,7 +78,7 @@ jobs:
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          environment: pypi
+          password: ${{ secrets.PYPI_API_TOKEN }}
 
       - name: Publish to MCP Registry
         run: |
