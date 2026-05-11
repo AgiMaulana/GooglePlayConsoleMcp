@@ -199,60 +199,97 @@ class PublisherClient:
         try:
             track_data = self._get_track(package_name, edit_id, track)
             releases: List[Dict[str, Any]] = track_data.get("releases", [])
+
+            # Normalize target version codes to strings for consistent comparison
             target_vcs = {str(vc) for vc in version_codes} if version_codes else None
 
-            # Determine the target release's version codes for filtering
+            # Find the target release and clone it to avoid mutating the original
+            target_release = None
             target_release_vcs: Optional[set] = None
             target_was_completed = False
-            updated = False
+
             for release in releases:
+                # Normalize version codes to strings for comparison
+                release_vcs = {str(vc) for vc in release.get("versionCodes", [])}
+
                 if target_vcs:
-                    if not set(release.get("versionCodes", [])).intersection(target_vcs):
+                    if not release_vcs.intersection(target_vcs):
                         continue
-                # This is the release we're updating
-                target_release_vcs = set(release.get("versionCodes", []))
-                
+
+                # Found target release - clone it to avoid mutating original
+                target_release = dict(release)
+                target_release_vcs = release_vcs
+
                 # Track if target is currently completed (before modification)
                 target_was_completed = release.get("status") == "completed"
-                
-                if status:
-                    release["status"] = status
-                if rollout_percentage is not None:
-                    if rollout_percentage >= 100:
-                        release["status"] = "completed"
-                        release.pop("userFraction", None)
-                    else:
-                        if not status:
-                            release["status"] = "inProgress"
-                        release["userFraction"] = round(rollout_percentage / 100.0, 4)
-                updated = True
                 break
 
-            if not updated:
+            if not target_release:
                 raise ValueError(
                     f"No matching release found in the '{track}' track."
                 )
 
-            # Filter out completed releases that are not the target release
-            # when there will be multiple completed releases after the update.
-            # This avoids the API error: "Only one completed release is allowed."
+            # Apply updates to the cloned target release
+            if status:
+                target_release["status"] = status
+            if rollout_percentage is not None:
+                if rollout_percentage >= 100:
+                    target_release["status"] = "completed"
+                    target_release.pop("userFraction", None)
+                else:
+                    if not status:
+                        target_release["status"] = "inProgress"
+                    target_release["userFraction"] = round(rollout_percentage / 100.0, 4)
+
+            # Determine if we need to filter completed releases
             target_is_becoming_completed = (
                 status == "completed" or
                 (rollout_percentage is not None and rollout_percentage >= 100)
             )
-            # Filter if: (1) target is becoming completed, or
-            # (2) target was completed and is being changed to non-completed
             should_filter = (
                 target_is_becoming_completed or
                 (target_was_completed and status and status != "completed")
             )
+
+            # Rebuild the releases payload safely
+            # This avoids mutating the original releases list and ensures proper filtering
             if should_filter:
-                releases_for_put = [
-                    r for r in releases
-                    if r.get("status") != "completed" or set(r.get("versionCodes", [])) == target_release_vcs
-                ]
+                releases_for_put = []
+                for r in releases:
+                    # Normalize version codes for comparison
+                    r_vcs = {str(vc) for vc in r.get("versionCodes", [])}
+
+                    # Include the updated target release
+                    if r_vcs == target_release_vcs:
+                        releases_for_put.append(target_release)
+                        continue
+
+                    # Exclude other completed releases when:
+                    # (1) target becomes completed, OR
+                    # (2) target was completed and is being changed to non-completed
+                    if should_filter and r.get("status") == "completed":
+                        continue
+
+                    releases_for_put.append(r)
+
+                # Sanity check: ensure only one completed release in final payload
+                completed_count = sum(
+                    1 for r in releases_for_put if r.get("status") == "completed"
+                )
+                if completed_count > 1:
+                    raise RuntimeError(
+                        f"Internal error: {completed_count} completed releases in payload. "
+                        "Expected at most 1 when target is completed."
+                    )
             else:
-                releases_for_put = releases
+                # When not filtering, still include the updated target release
+                releases_for_put = []
+                for r in releases:
+                    r_vcs = {str(vc) for vc in r.get("versionCodes", [])}
+                    if r_vcs == target_release_vcs:
+                        releases_for_put.append(target_release)
+                    else:
+                        releases_for_put.append(r)
 
             updated_track = self._update_track(
                 package_name, edit_id, track, {"track": track, "releases": releases_for_put}
