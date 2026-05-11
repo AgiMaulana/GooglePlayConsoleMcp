@@ -30,3 +30,4 @@ env/
 
 # Local editor backups
 .qwen/settings.json.orig
+.serena
