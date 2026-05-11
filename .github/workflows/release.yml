@@ -48,8 +48,12 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
           git add pyproject.toml server.json
-          git commit -m "release: v${{ steps.version.outputs.version }}"
-          git push origin HEAD:main
+          if git diff --cached --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "release: v${{ steps.version.outputs.version }}"
+            git push origin HEAD:main
+          fi
 
       - name: Create GitHub Release
         env:
